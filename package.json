@@ -1,0 +1,22 @@
+{
+  "name": "golden-arena-tutorial",
+  "version": "1.0.0",
+  "description": "This repository is for the Golden Arena Tutorial website",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nurudeenheroic/Golden-Arena-Tutorial.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/nurudeenheroic/Golden-Arena-Tutorial/issues"
+  },
+  "homepage": "https://github.com/nurudeenheroic/Golden-Arena-Tutorial#readme"
+}

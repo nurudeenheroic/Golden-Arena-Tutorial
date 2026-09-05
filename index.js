@@ -1,0 +1,1 @@
+console.log("Golden Arena Tutorial Node.js app is running.");
