@@ -7,12 +7,15 @@ import { HowItWorks } from "@/components/marketing/HowItWorks";
 import { Pricing } from "@/components/marketing/pricing";
 import { FAQ } from "@/components/marketing/FAQ";
 import { Contact } from "@/components/marketing/Contact";
-import { SideRail } from "@/components/marketing/SideRail";
+import { SideRail } from "@/components/shared/SideRail";
 import { Stats } from "@/components/marketing/Stats";
 import { Subjects } from "@/components/marketing/Subjects";
 import { SuccessCTA } from "@/components/marketing/SuccessCTA";
 import { Testimonials } from "@/components/marketing/Testimonials";
 import { WhatsAppCTA } from "@/components/marketing/WhatsAppCTA";
+import { ExamPreparation } from "@/components/marketing/ExamPreparation";
+import { AboutTeaser } from "@/components/marketing/AboutTeaser";
+
 
 export default function HomePage() {
   return (
@@ -26,9 +29,13 @@ export default function HomePage() {
             <Stats />
           </div>
 
+          <ExamPreparation />
+
           <Subjects />
 
           <HowItWorks />
+
+          <AboutTeaser />
 
           <Pricing />
 
@@ -47,7 +54,7 @@ export default function HomePage() {
         {/* Sidebar is hidden on mobile/tablet to keep the responsive layout clean. */}
         <div className="hidden pt-5 lg:block">
           <div className="sticky top-24">
-            <SideRail />
+            <SideRail user={null} isLoading={false} />
           </div>
         </div>
       </div>
