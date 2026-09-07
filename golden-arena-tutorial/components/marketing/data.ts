@@ -20,17 +20,40 @@ import {
 } from "lucide-react";
 
 // Replace this with your real WhatsApp community invite link before launch.
-export const WHATSAPP_GROUP_URL = "https://chat.whatsapp.com/REPLACE_ME";
+// components/marketing/data.ts
+export const WHATSAPP_GROUP_URL = "https://chat.whatsapp.com/your-group-invite-code";
 
 export const navLinks = [
   { label: "Home", href: "/" },
-  { label: "UTME", href: "/utme", dropdown: true },
-  { label: "Post-UTME", href: "/post-utme", dropdown: true },
+  {
+    label: "UTME",
+    href: "/utme",
+    dropdown: [
+      { label: "JAMB Syllabus", href: "/utme/syllabus" },
+      { label: "UTME Practice Tests", href: "/quizzes?category=utme", requiresPaid: false },
+      { label: "Subject Combination Guide", href: "/utme/subjects" },
+    ],
+  },
+  {
+    label: "Post-UTME",
+    href: "/post-utme",
+    dropdown: [
+      { label: "Select University", href: "/post-utme/universities" },
+      { label: "Past CBT Screening Tests", href: "/quizzes?category=post_utme", requiresPaid: true },
+    ],
+  },
   { label: "Past Questions", href: "/past-questions" },
   { label: "Quizzes", href: "/quizzes" },
   { label: "Study Groups", href: WHATSAPP_GROUP_URL },
   { label: "Pricing", href: "/pricing" },
-  { label: "Resources", href: "/resources", dropdown: true },
+  {
+    label: "Resources",
+    href: "/resources",
+    dropdown: [
+      { label: "Study Notes", href: "/notes", requiresPaid: true },
+      { label: "FAQs & Support", href: "/support" },
+    ],
+  },
 ];
 
 export const stats = [

@@ -62,15 +62,15 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={isPending}
-          className="w-full bg-orange-800 text-white py-3 rounded-xl text-sm font-medium hover:bg-orange-900 disabled:opacity-50 transition-colors"
+          className="w-full bg-[#833b0c] text-white py-3 rounded-xl text-sm font-medium hover:bg-orange-900 disabled:opacity-50 transition-colors"
         >
           {isPending ? "Signing in..." : "Log In"}
         </button>
       </form>
 
-      <p className="text-xs text-gray-500 text-center">
+      <p className="text-xs text-gray-400 text-center">
         Don&apos;t have an account?{" "}
-        <a href="/signup" className="text-orange-800 font-semibold hover:underline">
+        <a href="/signup" className="text-[#833b0c] font-semibold hover:underline">
           Sign up
         </a>
       </p>
