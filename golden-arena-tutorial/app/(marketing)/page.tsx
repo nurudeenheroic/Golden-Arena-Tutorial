@@ -4,6 +4,9 @@
 
 import { Hero } from "@/components/marketing/Hero";
 import { HowItWorks } from "@/components/marketing/HowItWorks";
+import { Pricing } from "@/components/marketing/pricing";
+import { FAQ } from "@/components/marketing/FAQ";
+import { Contact } from "@/components/marketing/Contact";
 import { SideRail } from "@/components/marketing/SideRail";
 import { Stats } from "@/components/marketing/Stats";
 import { Subjects } from "@/components/marketing/Subjects";
@@ -27,8 +30,14 @@ export default function HomePage() {
 
           <HowItWorks />
 
+          <Pricing />
+
           {/* Testimonials intentionally appear before the final CTA. */}
           <Testimonials />
+
+          <FAQ/>
+
+          <Contact />
 
           <WhatsAppCTA />
 

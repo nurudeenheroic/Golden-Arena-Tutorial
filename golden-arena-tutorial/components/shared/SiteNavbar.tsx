@@ -1,9 +1,4 @@
-    // components/shared/SiteNavbar.tsx
-    //
-    // Shared navigation bar used by both the marketing layout (logged-out
-    // visitors) and the candidate layout (logged-in students). Pass a `user`
-    // prop from whichever layout renders this — omit it for logged-out.
-   "use client";
+"use client";
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
@@ -53,6 +48,18 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
     );
   };
 
+  // Helper to handle smooth scrolling to top or hash anchors
+  const handlePublicClick = (labelLower: string, e: React.MouseEvent) => {
+    if (labelLower === "home") {
+      if (pathname === "/") {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }
+    setMobileMenuOpen(false);
+    setActiveDropdown(null);
+  };
+
   return (
     <header ref={navRef} className="sticky top-0 z-50 border-b border-stone-100 bg-white/95 backdrop-blur">
       <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between px-5 lg:px-8">
@@ -61,10 +68,7 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
         <Link
           href={user ? "/dashboard" : "/"}
           className="flex shrink-0 items-center gap-2.5"
-          onClick={() => {
-            setMobileMenuOpen(false);
-            setActiveDropdown(null);
-          }}
+          onClick={(e) => handlePublicClick("home", e)}
         >
           <div className="grid size-10 place-items-center rounded-xl bg-[#833b0c] text-white shadow-sm">
             <GraduationCap className="size-5" />
@@ -81,81 +85,93 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
 
         {/* Desktop Navigation (> 1100px) */}
         <nav className="hidden min-[1101px]:flex items-center justify-center gap-6">
-        {navLinks.map((item) => {
-            // 1. HOME LINK: Direct routing without ProtectedLink modal wrapper
-            if (item.label === "Home" || item.href === "/") {
-            return (
+          {navLinks.map((item) => {
+            const labelLower = item.label?.toLowerCase().trim();
+            const hrefLower = item.href?.toLowerCase().trim();
+
+            const isPublic =
+              labelLower === "home" ||
+              labelLower === "pricing" ||
+              hrefLower === "/" ||
+              hrefLower === "/#pricing" ||
+              hrefLower?.includes("#pricing");
+
+            // 1. PUBLIC LINKS (Home & Pricing) - Standard Next Link, No Modal
+            if (isPublic) {
+              const targetHref =
+                labelLower === "home" || hrefLower === "/"
+                  ? user ? "/dashboard" : "/"
+                  : "/#pricing";
+
+              return (
                 <Link
-                key={item.label}
-                href={user ? "/dashboard" : "/"}
-                className={`py-6 text-xs font-medium transition hover:text-[#833b0c] ${
-                    pathname === "/" || pathname === "/dashboard"
-                    ? "border-b-2 border-[#833b0c] font-bold text-[#833b0c]"
-                    : "text-slate-700"
-                }`}
+                  key={item.label}
+                  href={targetHref}
+                  onClick={(e) => handlePublicClick(labelLower, e)}
+                  className="py-6 text-xs font-medium text-slate-700 transition hover:text-[#833b0c]"
                 >
-                {item.label}
+                  {item.label}
                 </Link>
-            );
+              );
             }
 
             const hasSubLinks = Array.isArray(item.dropdown) && item.dropdown.length > 0;
 
-            // 2. DROPDOWN HEADERS (e.g., UTME, Post-UTME, Resources)
+            // 2. DROPDOWN HEADERS (UTME, Post-UTME, Resources)
             if (hasSubLinks) {
-            return (
+              return (
                 <div
-                key={item.label}
-                className="relative"
-                onMouseEnter={() => setActiveDropdown(item.label)}
-                onMouseLeave={() => setActiveDropdown(null)}
+                  key={item.label}
+                  className="relative"
+                  onMouseEnter={() => setActiveDropdown(item.label)}
+                  onMouseLeave={() => setActiveDropdown(null)}
                 >
-                <button
+                  <button
                     type="button"
                     className="flex items-center gap-1 py-6 text-xs font-medium text-slate-700 transition hover:text-[#833b0c]"
-                >
+                  >
                     <span>{item.label}</span>
                     <ChevronDown
-                    className={`size-3.5 transition-transform duration-200 ${
+                      className={`size-3.5 transition-transform duration-200 ${
                         activeDropdown === item.label ? "rotate-180 text-[#833b0c]" : ""
-                    }`}
+                      }`}
                     />
-                </button>
+                  </button>
 
-                {activeDropdown === item.label && (
+                  {activeDropdown === item.label && (
                     <div className="absolute top-[calc(100%-8px)] left-0 min-w-[200px] rounded-xl border border-stone-100 bg-white p-2 shadow-lg animate-in fade-in slide-in-from-top-1">
-                    {item.dropdown.map((subItem) => (
+                      {item.dropdown.map((subItem) => (
                         <ProtectedLink
-                        key={subItem.label}
-                        href={subItem.href}
-                        user={user}
-                        requiresPaid={subItem.requiresPaid}
-                        onClick={() => setActiveDropdown(null)}
-                        className="block rounded-lg px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-[#f9eee7] hover:text-[#833b0c]"
+                          key={subItem.label}
+                          href={subItem.href}
+                          user={user}
+                          requiresPaid={subItem.requiresPaid}
+                          onClick={() => setActiveDropdown(null)}
+                          className="block rounded-lg px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-[#f9eee7] hover:text-[#833b0c]"
                         >
-                        {subItem.label}
+                          {subItem.label}
                         </ProtectedLink>
-                    ))}
+                      ))}
                     </div>
-                )}
+                  )}
                 </div>
-            );
+              );
             }
 
-            // 3. PROTECTED STANDALONE LINKS (e.g., Quizzes, Pricing, Ask Question)
+            // 3. PROTECTED STANDALONE LINKS
             return (
-            <ProtectedLink
+              <ProtectedLink
                 key={item.label}
                 href={item.href}
                 user={user}
                 requiresPaid={item.requiresPaid}
                 onClick={() => setActiveDropdown(null)}
                 className="py-6 text-xs font-medium text-slate-700 transition hover:text-[#833b0c]"
-            >
+              >
                 {item.label}
-            </ProtectedLink>
+              </ProtectedLink>
             );
-        })}
+          })}
         </nav>
 
         {/* Right Side Controls */}
@@ -212,6 +228,34 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
         <div className="absolute top-[calc(100%+8px)] right-5 z-50 min-w-[240px] max-w-[320px] rounded-2xl border border-stone-100 bg-white p-3 shadow-xl max-[1100px]:block min-[1101px]:hidden animate-in fade-in slide-in-from-top-2">
           <nav className="flex flex-col space-y-1">
             {navLinks.map((item) => {
+              const labelLower = item.label?.toLowerCase().trim();
+              const hrefLower = item.href?.toLowerCase().trim();
+
+              const isPublic =
+                labelLower === "home" ||
+                labelLower === "pricing" ||
+                hrefLower === "/" ||
+                hrefLower === "/#pricing" ||
+                hrefLower?.includes("#pricing");
+
+              if (isPublic) {
+                const targetHref =
+                  labelLower === "home" || hrefLower === "/"
+                    ? user ? "/dashboard" : "/"
+                    : "/#pricing";
+
+                return (
+                  <Link
+                    key={item.label}
+                    href={targetHref}
+                    onClick={(e) => handlePublicClick(labelLower, e)}
+                    className="flex items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 transition hover:bg-[#f9eee7] hover:text-[#833b0c]"
+                  >
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              }
+
               const hasSubLinks = Array.isArray(item.dropdown) && item.dropdown.length > 0;
               const isExpanded = expandedMobileCategories.includes(item.label);
 
@@ -219,7 +263,6 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
                 <div key={item.label} className="py-0.5">
                   {hasSubLinks ? (
                     <>
-                      {/* Accordion Trigger Button */}
                       <button
                         onClick={() => toggleMobileCategory(item.label)}
                         className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 transition hover:bg-[#f9eee7] hover:text-[#833b0c]"
@@ -232,7 +275,6 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
                         />
                       </button>
 
-                      {/* Collapsible Accordion Sub-links */}
                       {isExpanded && (
                         <div className="ml-3 mt-1 space-y-1 border-l-2 border-[#f9eee7] pl-2 animate-in fade-in slide-in-from-top-1">
                           {item.dropdown.map((subItem) => (
@@ -251,7 +293,6 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
                       )}
                     </>
                   ) : (
-                    /* Standard Direct Link */
                     <ProtectedLink
                       href={item.href}
                       user={user}

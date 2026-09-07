@@ -24,3 +24,18 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+@layer base {
+  /* Enforce pointer cursor on all interactive elements */
+  button,
+  a,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  select,
+  [role="button"] {
+    cursor: pointer;
+  }
+}
+html {
+  scroll-behavior: smooth;
+}

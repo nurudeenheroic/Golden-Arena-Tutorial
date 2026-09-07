@@ -45,7 +45,7 @@ export const navLinks = [
   { label: "Past Questions", href: "/past-questions" },
   { label: "Quizzes", href: "/quizzes" },
   { label: "Study Groups", href: WHATSAPP_GROUP_URL },
-  { label: "Pricing", href: "/pricing" },
+  { label: "Pricing", href: "/#pricing" },
   {
     label: "Resources",
     href: "/resources",
@@ -121,6 +121,56 @@ export const testimonials = [
     quote: "The platform is easy to use and has everything I need. Highly recommended!",
     name: "David K.",
     role: "UTME Candidate",
+  },
+{
+    name: "Emeka Nwosu",
+    role: "Gained Admission to UNILAG (Medicine)",
+    quote:
+      "The CBT mock exams felt exactly like the actual JAMB hall setting. Practicing under timed conditions boosted my speed and confidence tremendously!",
+  },
+  {
+    name: "Amina Yusuf",
+    role: "Scored 312 in 2025 UTME",
+    quote:
+      "GAT study notes simplified complex Physics and Chemistry topics into digestible bites. I went from scoring 210 in mock tests to 312 in the main exam!",
+  },
+  {
+    name: "Tunde Bakare",
+    role: "Admitted to OAU (Computer Engineering)",
+    quote:
+      "The Post-UTME past question bank was a total game-changer for me. Almost 70% of the question types I practiced appeared in my screening test.",
+  },
+
+  // 5 New Testimonials Added Below:
+  {
+    name: "Blessing Okon",
+    role: "Admitted to UNIBEN (Law)",
+    quote:
+      "The step-by-step answer explanations helped me understand *why* an option was correct rather than just cramming answers. Highly recommended!",
+  },
+  {
+    name: "Chidi Nnamdi",
+    role: "Scored 298 in UTME",
+    quote:
+      "Buying the single ₦500 Mock Exam test gave me the exact reality check I needed two weeks before my exam. Worth every single Naira.",
+  },
+  {
+    name: "Fatima Bello",
+    role: "Admitted to ABU Zaria (Pharmacy)",
+    quote:
+      "The WhatsApp study group kept me accountable every single day. Having tutors answer my quick doubts late at night made all the difference.",
+  },
+  {
+    name: "Kelechi Eze",
+    role: "Scored 305 in UTME",
+    quote:
+      "I used to struggle with Use of English comprehension passages. The practice quizzes on GAT taught me speed-reading strategies that saved me.",
+  },
+  {
+    name: "Zainab Abubakar",
+    role: "Admitted to UI (Economics)",
+    quote:
+      "The smooth mobile interface allowed me to practice 20 quick quiz questions on my phone while traveling. It made studying effortless anywhere.",
   },
 ];
 
