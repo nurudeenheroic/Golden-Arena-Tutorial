@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Upload, CheckCircle2, AlertCircle, FileText, Loader2 } from "lucide-react";
@@ -10,66 +9,131 @@ export default function CSVUploadPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  const parseCSV = (text: string): string[][] => {
+    const rows: string[][] = [];
+    let currentRow: string[] = [];
+    let currentVal = "";
+    let insideQuotes = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+
+      if (char === '"') {
+        if (insideQuotes && nextChar === '"') {
+          currentVal += '"';
+          i++;
+        } else {
+          insideQuotes = !insideQuotes;
+        }
+      } else if (char === "," && !insideQuotes) {
+        currentRow.push(currentVal.trim().replace(/^["']|["']$/g, ""));
+        currentVal = "";
+      } else if ((char === "\n" || char === "\r") && !insideQuotes) {
+        if (char === "\r" && nextChar === "\n") i++;
+        currentRow.push(currentVal.trim().replace(/^["']|["']$/g, ""));
+        if (currentRow.some((cell) => cell.length > 0)) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+        currentVal = "";
+      } else {
+        currentVal += char;
+      }
+    }
+    if (currentVal || currentRow.length > 0) {
+      currentRow.push(currentVal.trim().replace(/^["']|["']$/g, ""));
+      if (currentRow.some((cell) => cell.length > 0)) {
+        rows.push(currentRow);
+      }
+    }
+    return rows;
+  };
+
   const handleUpload = async () => {
     if (!file) return;
     setIsUploading(true);
     setStatusMsg(null);
-
     try {
       const text = await file.text();
-      const lines = text.split("\n").filter((l) => l.trim().length > 0);
-      if (lines.length < 2) {
+      const rows = parseCSV(text);
+      
+      if (rows.length < 2) {
         throw new Error("CSV file must contain a header row and at least one question row.");
       }
 
-      const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+      const headers = rows[0];
+      const dataRows = rows.slice(1);
 
-      // Parse CSV records
-      const records = lines.slice(1).map((line) => {
-        const values = line
-          .split(/,(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/)
-          .map((v) => v.trim().replace(/^"|"$/g, ""));
+      const records = dataRows.map((row) => {
         const record: Record<string, any> = {};
         headers.forEach((header, idx) => {
-          record[header] = values[idx] ?? "";
+          record[header] = row[idx] ?? "";
         });
         return record;
       });
 
-      const supabase = createClient();
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const allowedCategories = ["UTME", "POST_UTME", "WAEC", "NECO", "GENERAL", "JUPEB", "PUTME"];
+      const allowedDifficulties = ["easy", "medium", "hard"];
 
+      const supabase = createClient();
       const formattedQuestions = records.map((r) => {
         let parsedOptions: string[] = [];
         try {
           parsedOptions = JSON.parse(r.options || "[]");
         } catch {
-          // Fallback if options are semicolon delimited (e.g. "Opt A; Opt B; Opt C; Opt D")
           parsedOptions = r.options ? r.options.split(";").map((s: string) => s.trim()) : [];
         }
+
+        const rawAns = (r.correct_answer || "A").trim();
+        let actualAnswer = rawAns;
+        if (rawAns.length === 1 && /^[a-zA-Z]$/.test(rawAns)) {
+          const optIndex = rawAns.toUpperCase().charCodeAt(0) - 65;
+          if (optIndex >= 0 && optIndex < parsedOptions.length) {
+            actualAnswer = parsedOptions[optIndex];
+          }
+        }
+
+        const validSubjectId = uuidRegex.test(r.subject_id)
+          ? r.subject_id
+          : "155e6c15-5625-4f1d-8096-c907d6664b6f";
+
+        const rawDiff = (r.difficulty || "medium").toLowerCase().trim();
+        const difficulty = allowedDifficulties.includes(rawDiff) ? rawDiff : "medium";
+
+        const rawCategory = (r.exam_category || "UTME").toUpperCase().trim();
+        const exam_category = allowedCategories.includes(rawCategory) ? rawCategory : "UTME";
 
         return {
           question_code: r.question_code || null,
           text: r.text,
           options: parsedOptions,
-          correct_answer: r.correct_answer || "A",
+          correct_answer: actualAnswer,
           explanation: r.explanation || null,
-          difficulty: r.difficulty || "medium",
-          exam_category: r.exam_category || "utme",
-          subject_id: r.subject_id,
+          difficulty: difficulty,
+          exam_category: exam_category,
+          subject_id: validSubjectId,
           year: parseInt(r.year || "2026", 10),
         };
       });
 
-      const { error } = await supabase.from("questions").insert(formattedQuestions);
+      const { error } = await supabase
+        .from("questions")
+        .upsert(formattedQuestions, { onConflict: "question_code" });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Batch upsert error:", error);
+        throw new Error(error.message);
+      }
 
       setStatusMsg({
         type: "success",
-        text: `Successfully uploaded ${formattedQuestions.length} questions into the bank!`,
+        text: `Successfully uploaded and synced ${formattedQuestions.length} questions into the bank!`,
       });
       setFile(null);
     } catch (err: any) {
+      console.error("Upload process error:", err);
       setStatusMsg({
         type: "error",
         text: err.message || "Failed to parse and insert CSV questions.",
@@ -81,23 +145,20 @@ export default function CSVUploadPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <Link href="/questions" className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-[#833b0c]">
+      <Link href="/admin/questions" className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-[#833b0c]">
         <ArrowLeft className="size-4" />
         <span>Back to Question Bank</span>
       </Link>
-
       <div>
         <h1 className="text-xl font-black text-slate-900">Bulk Upload Questions via CSV</h1>
         <p className="text-xs text-slate-500">
           Batch import questions, options, keys, and step-by-step solutions into Supabase.
         </p>
       </div>
-
       <div className="rounded-3xl border-2 border-dashed border-stone-200 bg-white p-8 text-center space-y-4">
         <div className="grid size-12 place-items-center rounded-2xl bg-[#f9eee7] text-[#833b0c] mx-auto">
           <Upload className="size-6" />
         </div>
-
         <div>
           <label className="cursor-pointer font-bold text-xs text-[#833b0c] hover:underline">
             <span>Click to select .csv file</span>
@@ -109,10 +170,9 @@ export default function CSVUploadPage() {
             />
           </label>
           <p className="text-[11px] text-slate-400 mt-1">
-            Expected CSV headers: <code>subject_id, text, options, correct_answer, explanation, difficulty, year</code>
+            Expected CSV headers: <code>question_code, text, options, correct_answer, explanation, difficulty, exam_category, subject_id, year</code>
           </p>
         </div>
-
         {file && (
           <div className="inline-flex items-center gap-2 rounded-xl bg-stone-100 px-3 py-1.5 text-xs font-bold text-slate-700">
             <FileText className="size-4 text-[#833b0c]" />
@@ -120,7 +180,6 @@ export default function CSVUploadPage() {
           </div>
         )}
       </div>
-
       {statusMsg && (
         <div
           className={`flex items-center gap-2 rounded-xl p-4 text-xs font-bold border ${
@@ -137,7 +196,6 @@ export default function CSVUploadPage() {
           <span>{statusMsg.text}</span>
         </div>
       )}
-
       <button
         type="button"
         disabled={!file || isUploading}
