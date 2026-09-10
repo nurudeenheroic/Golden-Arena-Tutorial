@@ -21,7 +21,9 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
-          response = NextResponse.next({ request });
+          response = NextResponse.next({
+            request,
+          });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );
@@ -30,31 +32,22 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Refresh auth session
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isDashboardRoute = request.nextUrl.pathname.startsWith("/dashboard");
+  const isAccessingAdmin = request.nextUrl.pathname.startsWith("/admin");
 
-  // If logged out & attempting to access dashboard, redirect to /login
-  if (!user && isDashboardRoute) {
+  // Security Check 1: Unauthenticated user trying to access /admin/*
+  if (isAccessingAdmin && !user) {
     const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
-  }
-
-  // Prevent browser caching for dashboard responses
-  if (isDashboardRoute) {
-    response.headers.set(
-      "Cache-Control",
-      "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
-    );
-    response.headers.set("Pragma", "no-cache");
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/admin/:path*", "/dashboard/:path*"],
 };

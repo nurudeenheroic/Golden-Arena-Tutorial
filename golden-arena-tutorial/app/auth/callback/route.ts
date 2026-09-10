@@ -9,8 +9,26 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
+    
+    // 1. Exchange the OAuth code for a session
+    const { data: authData, error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (!error && authData.user) {
+      // 2. Fetch the user's role from the profiles table
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", authData.user.id)
+        .maybeSingle();
+
+      const userRole = profile?.role?.toLowerCase().trim();
+
+      // 3. Redirect Admins to /admin/dashboard
+      if (userRole === "admin") {
+        return NextResponse.redirect(`${origin}/admin/dashboard`);
+      }
+
+      // Default redirect for candidates
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

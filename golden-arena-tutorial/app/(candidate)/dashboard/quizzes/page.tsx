@@ -12,7 +12,7 @@ export default async function QuizzesPage() {
 
   if (!user) redirect("/login");
 
-  // 1. Check if user has an active paid subscription
+  // 1. Check active subscription
   const { data: sub } = await supabase
     .from("subscriptions")
     .select("status, end_date")
@@ -23,7 +23,7 @@ export default async function QuizzesPage() {
     sub?.status === "active" &&
     (!sub.end_date || new Date(sub.end_date) > new Date());
 
-  // 2. Fetch all quizzes with subject details
+  // 2. Fetch quizzes with subjects
   const { data: quizzes } = await supabase
     .from("quizzes")
     .select(`
@@ -39,31 +39,39 @@ export default async function QuizzesPage() {
     `)
     .order("is_upcoming", { ascending: false });
 
-  // 3. Fetch user's completed attempt scores
+  // 3. Fetch user attempts INCLUDING attempt id
   const { data: attempts } = await supabase
     .from("quiz_attempts")
-    .select("quiz_id, score, total_questions")
+    .select("id, quiz_id, score, total_questions")
     .eq("user_id", user.id);
 
+  // Map attempt_id and calculated score percentage
   const attemptedMap = new Map(
     attempts?.map((a) => [
       a.quiz_id,
-      Math.round((a.score / a.total_questions) * 100),
+      {
+        attemptId: a.id,
+        percentage: Math.round((a.score / a.total_questions) * 100),
+      },
     ]) ?? []
   );
 
   const formattedQuizzes: FormattedQuiz[] =
-    quizzes?.map((q) => ({
-      id: q.id,
-      title: q.title,
-      subject: (q.subjects as unknown as { name: string })?.name ?? "General",
-      durationMinutes: q.time_limit,
-      isFreeTier: q.is_free_tier,
-      isUpcoming: q.is_upcoming,
-      scheduledFor: q.scheduled_for,
-      attempted: attemptedMap.has(q.id),
-      lastScorePercentage: attemptedMap.get(q.id),
-    })) ?? [];
+    quizzes?.map((q) => {
+      const userAttempt = attemptedMap.get(q.id);
+      return {
+        id: q.id,
+        title: q.title,
+        subject: (q.subjects as unknown as { name: string })?.name ?? "General",
+        durationMinutes: q.time_limit,
+        isFreeTier: q.is_free_tier,
+        isUpcoming: q.is_upcoming,
+        scheduledFor: q.scheduled_for,
+        attempted: Boolean(userAttempt),
+        lastScorePercentage: userAttempt?.percentage,
+        attemptId: userAttempt?.attemptId, // <--- Attach attempt ID for result page linking
+      };
+    }) ?? [];
 
   return <QuizzesClientHub quizzes={formattedQuizzes} isPaid={isPaid} />;
 }

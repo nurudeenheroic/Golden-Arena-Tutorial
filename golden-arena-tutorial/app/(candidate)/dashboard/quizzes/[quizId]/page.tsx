@@ -18,7 +18,19 @@ export default async function QuizRunnerPage({
 
   if (!user) redirect("/login");
 
-  // 1. Fetch Quiz Details
+  // 1. Intercept & Redirect if candidate has already attempted this quiz
+  const { data: existingAttempt } = await supabase
+    .from("quiz_attempts")
+    .select("id")
+    .eq("quiz_id", quizId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (existingAttempt) {
+    redirect(`/dashboard/quizzes/results/${existingAttempt.id}`);
+  }
+
+  // 2. Fetch Quiz Details
   const { data: quiz } = await supabase
     .from("quizzes")
     .select(`
@@ -33,7 +45,7 @@ export default async function QuizRunnerPage({
 
   if (!quiz) redirect("/dashboard/quizzes");
 
-  // 2. Check Plan Access Control
+  // 3. Check Plan Access Control
   if (!quiz.is_free_tier) {
     const { data: sub } = await supabase
       .from("subscriptions")
@@ -50,7 +62,7 @@ export default async function QuizRunnerPage({
     }
   }
 
-  // 3. Fetch Linked Questions
+  // 4. Fetch Linked Questions (securely without correct answers)
   const { data: quizQuestions } = await supabase
     .from("quiz_questions")
     .select(`

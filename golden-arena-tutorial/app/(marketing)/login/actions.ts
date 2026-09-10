@@ -18,13 +18,14 @@ export async function loginAction(
 
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signInWithPassword({
+  // 1. Authenticate user credentials
+  const { data: authData, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
-  if (error) {
-    const msg = error.message.toLowerCase();
+  if (error || !authData.user) {
+    const msg = error?.message.toLowerCase() || "";
 
     // Specific password errors
     if (msg.includes("password")) {
@@ -41,5 +42,19 @@ export async function loginAction(
     };
   }
 
-  redirect("/dashboard");
+  // 2. Query user profile to determine role
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", authData.user.id)
+    .single();
+
+  // 3. Redirect according to role
+  if (profile?.role === "admin") {
+    redirect("/admin/dashboard");
+  } else {
+    redirect("/dashboard");
+  }
+
+  
 }

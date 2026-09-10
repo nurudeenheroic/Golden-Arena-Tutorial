@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { submitQuizAttempt } from "./actions";
-import { Clock, Flag, CheckCircle2, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { submitQuizAction } from "@/submit-quiz";
+import { useRouter } from "next/navigation";
+import { Clock, Flag, CheckCircle2, ChevronLeft, ChevronRight, Loader2, AlertCircle } from "lucide-react";
 
 type Question = {
   id: string;
@@ -23,16 +24,18 @@ export default function QuizRunnerClient({
   timeLimitMinutes,
   questions,
 }: QuizRunnerClientProps) {
+  const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [flagged, setFlagged] = useState<Record<string, boolean>>({});
   const [timeLeft, setTimeLeft] = useState(timeLimitMinutes * 60);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Countdown timer
   useEffect(() => {
     if (timeLeft <= 0) {
-      handleFinalSubmit();
+      executeSubmission();
       return;
     }
     const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
@@ -51,11 +54,32 @@ export default function QuizRunnerClient({
     setFlagged((prev) => ({ ...prev, [currentQuestion.id]: !prev[currentQuestion.id] }));
   };
 
-  const handleFinalSubmit = async () => {
+  // Triggers confirmation modal open
+  const handleOpenSubmitModal = () => {
+    setShowConfirmModal(true);
+  };
+
+  // Perform actual API submission
+  const executeSubmission = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
-    const timeSpent = timeLimitMinutes * 60 - timeLeft;
-    await submitQuizAttempt(quizId, answers, Math.max(timeSpent, 1));
+
+    const timeSpentSec = Math.max(timeLimitMinutes * 60 - timeLeft, 1);
+
+    const formattedResponses = Object.entries(answers).map(([questionId, selectedOption]) => ({
+      questionId,
+      selectedOption,
+    }));
+
+    try {
+      const result = await submitQuizAction(quizId, formattedResponses, timeSpentSec);
+      router.push(`/dashboard/quizzes/results/${result.attemptId}`);
+    } catch (error: any) {
+      console.error("Quiz submission error:", error);
+      alert(error?.message || "There was an error submitting your quiz. Please try again.");
+      setIsSubmitting(false);
+      setShowConfirmModal(false);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -63,6 +87,9 @@ export default function QuizRunnerClient({
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
+
+  const answeredCount = Object.keys(answers).length;
+  const flaggedCount = Object.values(flagged).filter(Boolean).length;
 
   if (questions.length === 0) {
     return (
@@ -91,11 +118,11 @@ export default function QuizRunnerClient({
 
           <button
             type="button"
-            onClick={handleFinalSubmit}
+            onClick={handleOpenSubmitModal}
             disabled={isSubmitting}
             className="rounded-xl bg-[#833b0c] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#6f300a] transition disabled:opacity-50 cursor-pointer"
           >
-            {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : "Finish & Submit"}
+            Finish & Submit
           </button>
         </div>
       </div>
@@ -196,6 +223,70 @@ export default function QuizRunnerClient({
           })}
         </div>
       </div>
+
+      {/* Submit Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl space-y-5 border border-stone-100">
+            <div className="flex items-center gap-3">
+              <div className="grid size-10 place-items-center rounded-2xl bg-amber-100 text-amber-900">
+                <AlertCircle className="size-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Submit Quiz?</h3>
+                <p className="text-xs text-slate-500">Please review your progress before submitting.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 rounded-2xl bg-stone-50 p-4 border border-stone-200 text-center">
+              <div>
+                <span className="block text-xs font-semibold text-slate-500">Attempted</span>
+                <span className="text-sm font-black text-slate-900">{answeredCount} / {questions.length}</span>
+              </div>
+              <div>
+                <span className="block text-xs font-semibold text-slate-500">Flagged</span>
+                <span className="text-sm font-black text-amber-700">{flaggedCount}</span>
+              </div>
+              <div>
+                <span className="block text-xs font-semibold text-slate-500">Time Left</span>
+                <span className="text-sm font-black text-slate-900">{formatTime(timeLeft)}</span>
+              </div>
+            </div>
+
+            {answeredCount < questions.length && (
+              <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 p-3 rounded-xl">
+                ⚠️ You have <strong>{questions.length - answeredCount}</strong> unanswered question(s). Unanswered questions will be scored as incorrect.
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                disabled={isSubmitting}
+                className="rounded-xl border border-stone-200 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-stone-50 transition cursor-pointer"
+              >
+                Continue Test
+              </button>
+              <button
+                type="button"
+                onClick={executeSubmission}
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#833b0c] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#6f300a] transition disabled:opacity-50 cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <span>Confirm & Submit</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
