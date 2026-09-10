@@ -215,7 +215,7 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
       <header className="sticky top-0 z-50 border-b border-stone-100 bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between px-5 lg:px-8">
           
-          {/* Brand Logo - Slides in from left */}
+          {/* Brand Logo */}
           <Link
             href={user ? "/dashboard" : "/"}
             className="flex shrink-0 items-center gap-2.5 transition-all duration-500 ease-out animate-[slideFromLeft_0.5s_ease-out]"
@@ -234,7 +234,7 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
             </div>
           </Link>
 
-          {/* Desktop Navigation (Leaderboard & FAQ hidden for desktop view) */}
+          {/* Desktop Navigation */}
           <nav className="hidden min-[1101px]:flex items-center justify-center gap-2 lg:gap-3 animate-[slideFromTop_0.5s_ease-out]">
             {finalNavLinks.map((item) => {
               const labelLower = item.label?.toLowerCase().trim();
