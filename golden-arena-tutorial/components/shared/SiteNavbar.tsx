@@ -239,7 +239,6 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
             {finalNavLinks.map((item) => {
               const labelLower = item.label?.toLowerCase().trim();
               
-              // Hide Leaderboard and FAQ from desktop view
               if (labelLower?.includes("leaderboard") || labelLower?.includes("faq")) {
                 return null;
               }
@@ -303,7 +302,6 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
                       />
                     </button>
 
-                    {/* Collapsible Accordion Panel */}
                     <div
                       className={`absolute top-[calc(100%-4px)] left-0 min-w-[220px] rounded-xl border border-stone-200 bg-white p-2 shadow-xl transition-all duration-300 ease-in-out transform origin-top ${
                         isExpanded
@@ -360,7 +358,6 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
           <div className="flex items-center gap-2 sm:gap-3 animate-[slideFromRight_0.5s_ease-out]">
             {user ? (
               <div className="flex items-center gap-2 sm:gap-3">
-                {/* Notification Bell Dropdown */}
                 <div ref={notificationRef} className="relative">
                   <button
                     type="button"
@@ -448,7 +445,6 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
                   )}
                 </div>
 
-                {/* Candidate Avatar */}
                 <Link
                   href="/dashboard/profile"
                   onClick={() => setMobileMenuOpen(false)}
@@ -476,7 +472,6 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
               </>
             )}
 
-            {/* Hamburger Toggle */}
             <button
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Toggle navigation menu"
@@ -492,16 +487,12 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
       {/* Full-Screen Sheet Drawer & Backdrop Overlay */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex h-screen w-screen min-[1101px]:hidden">
-          {/* Backdrop Overlay */}
           <div 
             className="fixed inset-0 h-screen w-screen bg-black/40 backdrop-blur-xs transition-opacity animate-[fadeIn_0.3s_ease-out]" 
             onClick={() => setMobileMenuOpen(false)}
           />
 
-          {/* Sliding Full-Height Drawer Panel */}
           <div className="relative ml-auto h-screen w-full max-w-[300px] bg-white p-6 shadow-2xl flex flex-col justify-between overflow-y-auto z-10 animate-[slideFromRight_0.3s_ease-out]">
-            
-            {/* Drawer Header & Close Button */}
             <div>
               <div className="flex items-center justify-between pb-6 border-b border-stone-100">
                 <div className="flex items-center gap-2">
@@ -522,7 +513,6 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
                 </button>
               </div>
 
-              {/* Drawer Links with Icons (Kept inside mobile view) */}
               <nav className="mt-4 flex flex-col space-y-1">
                 {finalNavLinks.map((item) => {
                   const labelLower = item.label?.toLowerCase().trim();
@@ -595,7 +585,6 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
                             />
                           </button>
 
-                          {/* Accordion expand block */}
                           <div
                             className={`overflow-hidden transition-all duration-300 ease-in-out ${
                               isExpanded ? "max-h-96 opacity-100 mt-1" : "max-h-0 opacity-0"
@@ -628,7 +617,7 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
                         <ProtectedLink
                           href={item.href}
                           user={user}
-                          requiresPaid={subItem.requiresPaid}
+                          requiresPaid={item.requiresPaid}
                           onClick={() => setMobileMenuOpen(false)}
                           className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-semibold transition ${
                             isActive
@@ -648,7 +637,6 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
               </nav>
             </div>
 
-            {/* Footer Actions Inside Drawer */}
             <div className="pt-6 border-t border-stone-100 space-y-2 pb-6">
               {!user && (
                 <div className="space-y-2">
@@ -688,7 +676,6 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
         </div>
       )}
 
-      {/* Global CSS Keyframe Animations */}
       <style jsx global>{`
         @keyframes slideFromLeft {
           from { opacity: 0; transform: translateX(-20px); }
