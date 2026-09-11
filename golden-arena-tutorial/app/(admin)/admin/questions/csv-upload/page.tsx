@@ -65,10 +65,14 @@ export default function CSVUploadPage() {
       const headers = rows[0];
       const dataRows = rows.slice(1);
 
-      const records = dataRows.map((row) => {
-        const record: Record<string, any> = {};
+      const record: Record<string, any> = {};
         headers.forEach((header, idx) => {
-          record[header] = row[idx] ?? "";
+          // Clean BOM, whitespace, and normalize to lowercase for fail-safe matching
+          const cleanHeader = header.replace(/^\ufeff/, "").trim().toLowerCase();
+          const rawValue = row[idx] ?? "";
+          
+          record[cleanHeader] = rawValue;
+          record[header.trim()] = rawValue;
         });
         return record;
       });
@@ -105,6 +109,10 @@ export default function CSVUploadPage() {
         const rawCategory = (r.exam_category || "UTME").toUpperCase().trim();
         const exam_category = allowedCategories.includes(rawCategory) ? rawCategory : "UTME";
 
+        // Check various header capitalizations for topic
+        const rawTopic = r.topic || r.Topic || r.TOPIC || r["Study Topic"] || r["Subject Topic"] || "";
+        const topic = typeof rawTopic === "string" && rawTopic.trim() !== "" ? rawTopic.trim() : null;
+
         return {
           question_code: r.question_code || null,
           text: r.text,
@@ -115,6 +123,7 @@ export default function CSVUploadPage() {
           exam_category: exam_category,
           subject_id: validSubjectId,
           year: parseInt(r.year || "2026", 10),
+          topic: topic,
         };
       });
 
