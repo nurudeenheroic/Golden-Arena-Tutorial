@@ -117,8 +117,13 @@ export default async function DashboardProfilePage() {
                     {candidate.planName}
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600 border border-stone-200">
-                    Free Tier Candidate
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${
+                    candidate.isPaid 
+                      ? "bg-emerald-100 text-emerald-800 border-emerald-200" 
+                      : "bg-stone-100 text-slate-600 border-stone-200"
+                     }`}>
+                    {candidate.isPaid && <Sparkles className="size-3 fill-emerald-600" />}
+                    {candidate.planName}
                   </span>
                 )}
               </div>
