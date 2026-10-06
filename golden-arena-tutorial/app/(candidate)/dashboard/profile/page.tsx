@@ -60,11 +60,16 @@ export default async function DashboardProfilePage() {
       ? profile.name
       : googleFullName;
 
-  // Determine active paid status: check live subscription table first, fallback to profile column
+  // Robust status check covering common admin states
+  const subStatus = subscription?.status?.toLowerCase();
   const isSubscriptionActive =
-    subscription?.status === "active" ||
-    subscription?.status === "pro" ||
-    subscription?.status === "completed";
+    subStatus === "active" ||
+    subStatus === "pro" ||
+    subStatus === "completed" ||
+    subStatus === "approved" ||
+    subStatus === "paid";
+
+  const isUserPaid = isSubscriptionActive || Boolean(profile?.is_paid);
 
   const candidate = {
     id: user.id,
@@ -73,8 +78,8 @@ export default async function DashboardProfilePage() {
     email: user.email ?? "",
     phone: profile?.phone ?? "Not provided",
     targetExam: profile?.target_exam ?? "UTME 2027",
-    isPaid: isSubscriptionActive || Boolean(profile?.is_paid),
-    planName: subscription?.plan || subscription?.tier || (isSubscriptionActive ? "All-Access Pro" : "Free Tier"),
+    isPaid: isUserPaid,
+    planName: subscription?.plan || subscription?.tier || (isUserPaid ? "All-Access Pro" : "Free Tier"),
     streak: profile?.streak ?? 0,
     bestStreak: profile?.best_streak ?? 0,
     progressPercent: profile?.progress_percent ?? 0,
