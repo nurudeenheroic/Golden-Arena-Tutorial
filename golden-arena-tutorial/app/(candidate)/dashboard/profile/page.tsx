@@ -111,21 +111,15 @@ export default async function DashboardProfilePage() {
                   {candidate.displayName}
                 </h1>
                 
-                {candidate.isPaid ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
-                    <Sparkles className="size-3 fill-emerald-600" />
-                    {candidate.planName}
-                  </span>
-                ) : (
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${
-                    candidate.isPaid 
-                      ? "bg-emerald-100 text-emerald-800 border-emerald-200" 
-                      : "bg-stone-100 text-slate-600 border-stone-200"
-                     }`}>
-                    {candidate.isPaid && <Sparkles className="size-3 fill-emerald-600" />}
-                    {candidate.planName}
-                  </span>
-                )}
+                {/* Unified Dynamic Subscription Badge */}
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${
+                  candidate.isPaid 
+                    ? "bg-emerald-100 text-emerald-800 border-emerald-200" 
+                    : "bg-stone-100 text-slate-600 border-stone-200"
+                }`}>
+                  {candidate.isPaid && <Sparkles className="size-3 fill-emerald-600" />}
+                  {candidate.planName}
+                </span>
               </div>
 
               <p className="text-xs text-slate-500 flex items-center gap-1.5">
