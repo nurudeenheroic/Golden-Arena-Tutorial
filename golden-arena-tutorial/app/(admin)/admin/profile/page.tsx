@@ -23,7 +23,7 @@ export default function AdminProfilePage() {
       if (user) {
         setEmail(user.email ?? "");
 
-        // Fetch profile data
+        // 1. Fetch profile data
         const { data: profile } = await supabase
           .from("profiles")
           .select("name, display_name, role")
@@ -35,16 +35,23 @@ export default function AdminProfilePage() {
           setRole(profile.role ?? "admin");
         }
 
-        // Fetch user subscription data to match what the admin sees
-        const { data: subscription } = await supabase
-          .from("subscriptions")
-          .select("plan, status, tier")
+        // 2. Fetch subscription data (with console debugging)
+        const { data: subscription, error } = await supabase
+          .from("subscriptions") // Check if your table name is actually "subscriptions" or "user_subscriptions"
+          .select("*")
           .eq("user_id", user.id)
           .maybeSingle();
 
+        if (error) {
+          console.error("Error fetching subscription:", error.message);
+        }
+
         if (subscription) {
-          setSubscriptionPlan(subscription.plan || subscription.tier || "Pro Plan");
+          console.log("Subscription found:", subscription);
+          setSubscriptionPlan(subscription.plan || subscription.tier || subscription.status || "Pro Plan");
           setSubscriptionStatus(subscription.status || "active");
+        } else {
+          console.log("No subscription row found for user_id:", user.id);
         }
       }
     };
