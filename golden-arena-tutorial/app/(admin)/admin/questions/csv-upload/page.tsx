@@ -65,7 +65,9 @@ export default function CSVUploadPage() {
       const headers = rows[0];
       const dataRows = rows.slice(1);
 
-      const record: Record<string, any> = {};
+      // Fixed: Properly map over dataRows to build record objects
+      const records = dataRows.map((row) => {
+        const record: Record<string, any> = {};
         headers.forEach((header, idx) => {
           // Clean BOM, whitespace, and normalize to lowercase for fail-safe matching
           const cleanHeader = header.replace(/^\ufeff/, "").trim().toLowerCase();

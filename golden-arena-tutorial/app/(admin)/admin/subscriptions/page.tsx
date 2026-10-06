@@ -5,14 +5,11 @@ export const revalidate = 0;
 
 export default async function AdminSubscriptionsPage() {
   const supabase = await createClient();
-  const nowIso = new Date().toISOString();
 
-  // 1. Fetch active subscriptions (status = active and end_date is in the future)
-  const { data: activeSubs, error: subErr } = await supabase
+  // 1. Fetch ALL subscriptions (removed non-existent 'tier' column)
+  const { data: allSubs, error: subErr } = await supabase
     .from("subscriptions")
-    .select("id, user_id, status, plan, start_date, end_date")
-    .eq("status", "active")
-    .gte("end_date", nowIso);
+    .select("id, user_id, status, plan, start_date, end_date");
 
   if (subErr) {
     console.error("Error fetching subscriptions:", subErr.message);
@@ -28,7 +25,7 @@ export default async function AdminSubscriptionsPage() {
     console.error("Error fetching subscription requests:", reqErr.message);
   }
 
-  // 3. Fetch all candidate profiles (names and emails)
+  // 3. Fetch all candidate profiles
   const { data: profiles, error: profErr } = await supabase
     .from("profiles")
     .select("id, name, display_name, email")
@@ -45,34 +42,52 @@ export default async function AdminSubscriptionsPage() {
 
   // Map of active subscriptions by user_id
   const activeSubsMap: Record<string, any> = {};
-  (activeSubs || []).forEach((sub) => {
-    activeSubsMap[sub.user_id] = sub;
+  const now = new Date();
+
+  (allSubs || []).forEach((sub) => {
+    const status = sub.status?.toLowerCase();
+    const isStatusValid = ["active", "pro", "approved", "completed", "paid"].includes(status);
+    const isNotExpired = !sub.end_date || new Date(sub.end_date) >= now;
+
+    if (isStatusValid && isNotExpired) {
+      activeSubsMap[sub.user_id] = {
+        ...sub,
+        plan: sub.plan || "Pro Plan"
+      };
+    }
   });
 
   const activeUserIds = new Set(Object.keys(activeSubsMap));
 
+  // --- DEBUG LOGS FOR TERMINAL INSPECTION ---
+  console.log("--- DEBUG SUBSCRIPTIONS ---");
+  console.log("Total Profiles Found:", profiles?.length || 0);
+  console.log("Total Subscriptions Found:", allSubs?.length || 0);
+  console.log("Active Subs Mapped:", Object.keys(activeSubsMap).length);
+
   // 4. Build unified list starting with all registered profiles
   const allCandidatesMap: Record<string, any> = {};
 
-  // First, add all profiles as base records
   (profiles || []).forEach((prof) => {
     const isActivePro = activeUserIds.has(prof.id);
+    const subRecord = activeSubsMap[prof.id];
+
     allCandidatesMap[prof.id] = {
       id: `user-${prof.id}`,
       userId: prof.id,
       candidateName: prof.display_name || prof.name || "Candidate",
       candidateEmail: prof.email || "No email",
-      planType: isActivePro ? activeSubsMap[prof.id].plan : "Free Tier",
+      planType: isActivePro ? subRecord.plan : "Free Tier",
       amount: 0,
       status: isActivePro ? "active" : "free",
-      startDate: isActivePro ? activeSubsMap[prof.id].start_date : null,
-      endDate: isActivePro ? activeSubsMap[prof.id].end_date : null,
+      startDate: isActivePro ? subRecord.start_date : null,
+      endDate: isActivePro ? subRecord.end_date : null,
       currentPlanStatus: isActivePro ? "pro" : "free",
       requestType: "profile",
     };
   });
 
-  // Second, overlay or append explicit subscription requests (especially pending/rejected ones)
+  // Second, overlay or append explicit subscription requests
   const requests = (rawRequests || []).map((req) => {
     const prof = profilesMap[req.user_id];
     const isActivePro = activeUserIds.has(req.user_id);
@@ -92,7 +107,6 @@ export default async function AdminSubscriptionsPage() {
     };
   });
 
-  // Combine both views into one comprehensive manager list
   const combinedList = [
     ...Object.values(allCandidatesMap),
     ...requests,

@@ -23,7 +23,7 @@ export default async function DashboardProfilePage() {
 
   if (!user) redirect("/login");
 
-  // 1. Fetch profile data in parallel with quiz attempts and subscriptions
+  // Fetch profile, subscription, and quiz attempts using the exact same logic as the admin side
   const [
     { data: profile },
     { data: subscription },
@@ -31,12 +31,12 @@ export default async function DashboardProfilePage() {
   ] = await Promise.all([
     supabase
       .from("profiles")
-      .select("display_name, name, phone, target_exam, is_paid, streak, best_streak, progress_percent, leaderboard_rank, created_at")
+      .select("display_name, name, phone, target_exam, streak, best_streak, progress_percent, leaderboard_rank, created_at")
       .eq("id", user.id)
       .single(),
     supabase
       .from("subscriptions")
-      .select("status, plan, tier")
+      .select("*")
       .eq("user_id", user.id)
       .maybeSingle(),
     supabase
@@ -60,16 +60,9 @@ export default async function DashboardProfilePage() {
       ? profile.name
       : googleFullName;
 
-  // Robust status check covering common admin states
-  const subStatus = subscription?.status?.toLowerCase();
-  const isSubscriptionActive =
-    subStatus === "active" ||
-    subStatus === "pro" ||
-    subStatus === "completed" ||
-    subStatus === "approved" ||
-    subStatus === "paid";
-
-  const isUserPaid = isSubscriptionActive || Boolean(profile?.is_paid);
+  // Exact same validation used in AdminUserDetailPage
+  const isExpired = subscription?.end_date && new Date(subscription.end_date) < new Date();
+  const isSubscriptionActive = subscription?.status === "active" && !isExpired;
 
   const candidate = {
     id: user.id,
@@ -78,8 +71,8 @@ export default async function DashboardProfilePage() {
     email: user.email ?? "",
     phone: profile?.phone ?? "Not provided",
     targetExam: profile?.target_exam ?? "UTME 2027",
-    isPaid: isUserPaid,
-    planName: subscription?.plan || subscription?.tier || (isUserPaid ? "All-Access Pro" : "Free Tier"),
+    isPaid: isSubscriptionActive,
+    planName: subscription?.plan ? subscription.plan.toUpperCase() : (isSubscriptionActive ? "ALL-ACCESS PRO" : "FREE TIER"),
     streak: profile?.streak ?? 0,
     bestStreak: profile?.best_streak ?? 0,
     progressPercent: profile?.progress_percent ?? 0,
@@ -111,7 +104,7 @@ export default async function DashboardProfilePage() {
                   {candidate.displayName}
                 </h1>
                 
-                {/* Unified Dynamic Subscription Badge */}
+                {/* Dynamic Status Badge matching Admin Rules */}
                 <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${
                   candidate.isPaid 
                     ? "bg-emerald-100 text-emerald-800 border-emerald-200" 
