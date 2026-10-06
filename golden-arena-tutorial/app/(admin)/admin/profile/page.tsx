@@ -1,60 +1,66 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User, Shield, CheckCircle2, Loader2, CreditCard, Sparkles } from "lucide-react";
+import { User, Shield, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AdminProfilePage() {
-  const [displayName, setDisplayName] = useState("");
+  const [displayName, setDisplayName] = useState("System Admin");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("admin");
   const [subscriptionPlan, setSubscriptionPlan] = useState("Free Tier");
   const [subscriptionStatus, setSubscriptionStatus] = useState("inactive");
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     const loadProfileAndSubscription = async () => {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (user) {
-        setEmail(user.email ?? "");
+        if (user) {
+          setEmail(user.email ?? "");
 
-        // 1. Fetch profile data
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("name, display_name, role")
-          .eq("id", user.id)
-          .single();
+          // 1. Fetch profile data safely
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("name, display_name, role")
+            .eq("id", user.id)
+            .maybeSingle();
 
-        if (profile) {
-          setDisplayName(profile.display_name || profile.name || "System Admin");
-          setRole(profile.role ?? "admin");
+          if (profile) {
+            setDisplayName(profile.display_name || profile.name || "System Admin");
+            setRole(profile.role ?? "admin");
+          }
+
+          // 2. Fetch subscription data safely
+          const { data: subscription, error } = await supabase
+            .from("subscriptions")
+            .select("*")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          if (error) {
+            console.error("Error fetching subscription:", error.message);
+          }
+
+          if (subscription) {
+            console.log("Subscription found:", subscription);
+            setSubscriptionPlan(subscription.plan || subscription.tier || "Pro Plan");
+            setSubscriptionStatus(subscription.status || "active");
+          }
         }
-
-        // 2. Fetch subscription data (with console debugging)
-        const { data: subscription, error } = await supabase
-          .from("subscriptions") // Check if your table name is actually "subscriptions" or "user_subscriptions"
-          .select("*")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (error) {
-          console.error("Error fetching subscription:", error.message);
-        }
-
-        if (subscription) {
-          console.log("Subscription found:", subscription);
-          setSubscriptionPlan(subscription.plan || subscription.tier || subscription.status || "Pro Plan");
-          setSubscriptionStatus(subscription.status || "active");
-        } else {
-          console.log("No subscription row found for user_id:", user.id);
-        }
+      } catch (err) {
+        console.error("Failed to load profile/subscription:", err);
+      } finally {
+        setIsLoaded(true);
       }
     };
+
     loadProfileAndSubscription();
   }, []);
 
@@ -62,24 +68,29 @@ export default function AdminProfilePage() {
     e.preventDefault();
     setIsSaving(true);
 
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (user) {
-      await supabase
-        .from("profiles")
-        .update({ display_name: displayName })
-        .eq("id", user.id);
+      if (user) {
+        await supabase
+          .from("profiles")
+          .update({ display_name: displayName })
+          .eq("id", user.id);
 
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      }
+    } catch (err) {
+      console.error("Update failed:", err);
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
   };
 
-  const isPro = subscriptionStatus === "active" || subscriptionStatus === "pro";
+  const isPro = subscriptionStatus.toLowerCase() === "active" || subscriptionStatus.toLowerCase() === "pro";
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
@@ -92,7 +103,7 @@ export default function AdminProfilePage() {
         <div className="flex items-center justify-between pb-4 border-b border-stone-100">
           <div className="flex items-center gap-4">
             <div className="grid size-14 place-items-center rounded-2xl bg-[#f9eee7] text-lg font-black text-[#833b0c] border border-[#833b0c]/20">
-              {displayName.charAt(0).toUpperCase()}
+              {displayName ? displayName.charAt(0).toUpperCase() : "A"}
             </div>
             <div>
               <h2 className="text-sm font-bold text-slate-900">{displayName}</h2>
@@ -109,7 +120,7 @@ export default function AdminProfilePage() {
               isPro ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-stone-100 text-stone-700"
             }`}>
               <Sparkles className="size-3 text-[#833b0c]" />
-              {subscriptionPlan}
+              {isLoaded ? subscriptionPlan : "Loading..."}
             </span>
           </div>
         </div>
