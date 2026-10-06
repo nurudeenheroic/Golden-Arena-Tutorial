@@ -23,17 +23,27 @@ export default async function DashboardProfilePage() {
 
   if (!user) redirect("/login");
 
-  // Fetch both display_name and name explicitly
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("display_name, name, phone, target_exam, is_paid, streak, best_streak, progress_percent, leaderboard_rank, created_at")
-    .eq("id", user.id)
-    .single();
-
-  const { count: completedQuizzesCount } = await supabase
-    .from("quiz_attempts")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id);
+  // 1. Fetch profile data in parallel with quiz attempts and subscriptions
+  const [
+    { data: profile },
+    { data: subscription },
+    { count: completedQuizzesCount }
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("display_name, name, phone, target_exam, is_paid, streak, best_streak, progress_percent, leaderboard_rank, created_at")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("subscriptions")
+      .select("status, plan, tier")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("quiz_attempts")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+  ]);
 
   // Read official Google Full Name from OAuth metadata
   const googleFullName =
@@ -50,6 +60,12 @@ export default async function DashboardProfilePage() {
       ? profile.name
       : googleFullName;
 
+  // Determine active paid status: check live subscription table first, fallback to profile column
+  const isSubscriptionActive =
+    subscription?.status === "active" ||
+    subscription?.status === "pro" ||
+    subscription?.status === "completed";
+
   const candidate = {
     id: user.id,
     googleFullName,
@@ -57,7 +73,8 @@ export default async function DashboardProfilePage() {
     email: user.email ?? "",
     phone: profile?.phone ?? "Not provided",
     targetExam: profile?.target_exam ?? "UTME 2027",
-    isPaid: Boolean(profile?.is_paid),
+    isPaid: isSubscriptionActive || Boolean(profile?.is_paid),
+    planName: subscription?.plan || subscription?.tier || (isSubscriptionActive ? "All-Access Pro" : "Free Tier"),
     streak: profile?.streak ?? 0,
     bestStreak: profile?.best_streak ?? 0,
     progressPercent: profile?.progress_percent ?? 0,
@@ -92,7 +109,7 @@ export default async function DashboardProfilePage() {
                 {candidate.isPaid ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
                     <Sparkles className="size-3 fill-emerald-600" />
-                    All-Access Pro
+                    {candidate.planName}
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600 border border-stone-200">
