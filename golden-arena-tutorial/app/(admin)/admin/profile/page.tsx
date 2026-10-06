@@ -1,18 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User, Shield, CheckCircle2, Loader2 } from "lucide-react";
+import { User, Shield, CheckCircle2, Loader2, CreditCard, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AdminProfilePage() {
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("admin");
+  const [subscriptionPlan, setSubscriptionPlan] = useState("Free Tier");
+  const [subscriptionStatus, setSubscriptionStatus] = useState("inactive");
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const loadProfile = async () => {
+    const loadProfileAndSubscription = async () => {
       const supabase = createClient();
       const {
         data: { user },
@@ -20,6 +22,8 @@ export default function AdminProfilePage() {
 
       if (user) {
         setEmail(user.email ?? "");
+
+        // Fetch profile data
         const { data: profile } = await supabase
           .from("profiles")
           .select("name, display_name, role")
@@ -30,9 +34,21 @@ export default function AdminProfilePage() {
           setDisplayName(profile.display_name || profile.name || "System Admin");
           setRole(profile.role ?? "admin");
         }
+
+        // Fetch user subscription data to match what the admin sees
+        const { data: subscription } = await supabase
+          .from("subscriptions")
+          .select("plan, status, tier")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (subscription) {
+          setSubscriptionPlan(subscription.plan || subscription.tier || "Pro Plan");
+          setSubscriptionStatus(subscription.status || "active");
+        }
       }
     };
-    loadProfile();
+    loadProfileAndSubscription();
   }, []);
 
   const handleUpdate = async (e: React.FormEvent) => {
@@ -56,22 +72,37 @@ export default function AdminProfilePage() {
     setIsSaving(false);
   };
 
+  const isPro = subscriptionStatus === "active" || subscriptionStatus === "pro";
+
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <div>
         <h1 className="text-xl font-black text-slate-900">Admin Profile</h1>
-        <p className="text-xs text-slate-500">Manage administrator display details and security credentials.</p>
+        <p className="text-xs text-slate-500">Manage administrator display details and live subscription status.</p>
       </div>
 
       <form onSubmit={handleUpdate} className="rounded-3xl border border-stone-200 bg-white p-6 shadow-2xs space-y-5">
-        <div className="flex items-center gap-4 pb-4 border-b border-stone-100">
-          <div className="grid size-14 place-items-center rounded-2xl bg-[#f9eee7] text-lg font-black text-[#833b0c] border border-[#833b0c]/20">
-            {displayName.charAt(0).toUpperCase()}
+        <div className="flex items-center justify-between pb-4 border-b border-stone-100">
+          <div className="flex items-center gap-4">
+            <div className="grid size-14 place-items-center rounded-2xl bg-[#f9eee7] text-lg font-black text-[#833b0c] border border-[#833b0c]/20">
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">{displayName}</h2>
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-extrabold text-amber-900 mt-1">
+                <Shield className="size-3" /> System Administrator
+              </span>
+            </div>
           </div>
-          <div>
-            <h2 className="text-sm font-bold text-slate-900">{displayName}</h2>
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-extrabold text-amber-900">
-              <Shield className="size-3" /> System Administrator
+
+          {/* Real-time Subscription Badge */}
+          <div className="text-right">
+            <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Plan Status</span>
+            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold mt-1 ${
+              isPro ? "bg-emerald-50 text-emerald-800 border border-emerald-200" : "bg-stone-100 text-stone-700"
+            }`}>
+              <Sparkles className="size-3 text-[#833b0c]" />
+              {subscriptionPlan}
             </span>
           </div>
         </div>
