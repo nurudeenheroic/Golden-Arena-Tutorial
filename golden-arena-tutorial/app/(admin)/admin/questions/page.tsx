@@ -6,7 +6,7 @@ export const revalidate = 0;
 export default async function AdminQuestionsPage() {
   const supabase = await createClient();
 
-  // 1. Fetch questions with linked subject details
+  // 1. Fetch questions with linked subject details (including image_url)
   const { data: questions } = await supabase
     .from("questions")
     .select(`
@@ -19,6 +19,7 @@ export default async function AdminQuestionsPage() {
       difficulty,
       year,
       topic,
+      image_url,
       subject_id,
       subjects ( name, track )
     `)

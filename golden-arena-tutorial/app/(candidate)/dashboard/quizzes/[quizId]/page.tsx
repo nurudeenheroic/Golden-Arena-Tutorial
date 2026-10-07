@@ -62,14 +62,15 @@ export default async function QuizRunnerPage({
     }
   }
 
-  // 4. Fetch Linked Questions (securely without correct answers)
+  // 4. Fetch Linked Questions with image_url (securely without correct answers)
   const { data: quizQuestions } = await supabase
     .from("quiz_questions")
     .select(`
       questions (
         id,
         text,
-        options
+        options,
+        image_url
       )
     `)
     .eq("quiz_id", quizId);
@@ -80,11 +81,13 @@ export default async function QuizRunnerPage({
         id: string;
         text: string;
         options: string[];
+        image_url?: string | null;
       };
       return {
         id: q.id,
         text: q.text,
         options: q.options ?? [],
+        image_url: q.image_url ?? null,
       };
     }) ?? [];
 
