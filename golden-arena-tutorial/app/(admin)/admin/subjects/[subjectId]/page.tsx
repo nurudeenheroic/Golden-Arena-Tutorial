@@ -23,10 +23,10 @@ export default async function SubjectDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // 2. Fetch Questions strictly matching subject_id (without referencing created_at)
+  // 2. Fetch Questions matching subject_id with all view fields including image_url
   const { data: questions, error: questionsErr } = await supabase
     .from("questions")
-    .select("id, text, topic, explanation")
+    .select("id, question_code, text, options, correct_answer, explanation, difficulty, year, topic, image_url, subject_id")
     .eq("subject_id", subjectId);
 
   if (questionsErr) {

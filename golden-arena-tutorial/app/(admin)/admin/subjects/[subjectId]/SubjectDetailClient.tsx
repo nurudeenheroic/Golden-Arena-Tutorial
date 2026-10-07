@@ -15,6 +15,7 @@ import {
   Trash2,
   Loader2,
   Filter,
+  Image as ImageIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -37,6 +38,7 @@ interface Question {
   correct_answer?: string;
   topic?: string;
   explanation?: string;
+  image_url?: string | null;
 }
 
 export default function SubjectDetailClient({
@@ -290,6 +292,22 @@ export default function SubjectDetailClient({
                   <p className="text-xs font-bold text-slate-900 leading-relaxed">
                     {q.text}
                   </p>
+
+                  {/* Question Image Preview Thumbnail if available */}
+                  {q.image_url && (
+                    <div className="rounded-xl border border-stone-200 bg-stone-50 p-2 overflow-hidden flex items-center gap-2">
+                      <div className="size-12 rounded-lg bg-white border border-stone-200 shrink-0 overflow-hidden flex items-center justify-center">
+                        <img src={q.image_url} alt="Question diagram" className="h-full w-full object-contain" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold text-slate-700 flex items-center gap-1 truncate">
+                          <ImageIcon className="size-3 text-[#833b0c] shrink-0" />
+                          <span>Attached Diagram</span>
+                        </p>
+                        <p className="text-[9px] text-slate-400 truncate">{q.image_url}</p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Options List */}
                   {Array.isArray(q.options) && q.options.length > 0 && (

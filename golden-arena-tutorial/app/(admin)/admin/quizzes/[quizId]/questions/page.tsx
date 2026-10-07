@@ -31,22 +31,22 @@ export default async function QuizQuestionsPage({ params }: PageProps) {
 
   const attachedIds = junctionData?.map((j) => j.question_id) ?? [];
 
-  // 3. Fetch full question objects for attached and available pool
+  // 3. Fetch full question objects for attached and available pool (including image_url)
   let attachedQuestions: any[] = [];
   let availableQuestions: any[] = [];
 
   if (attachedIds.length > 0) {
     const { data: attached } = await supabase
       .from("questions")
-      .select("id, text, options, correct_answer, topic, explanation")
+      .select("id, text, options, correct_answer, topic, explanation, image_url")
       .in("id", attachedIds);
     attachedQuestions = attached ?? [];
   }
 
-  // Fetch unattached questions matching the quiz's subject
+  // Fetch unattached questions matching the quiz's subject (including image_url)
   let availableQuery = supabase
     .from("questions")
-    .select("id, text, options, correct_answer, topic, explanation")
+    .select("id, text, options, correct_answer, topic, explanation, image_url")
     .order("id", { ascending: false })
     .limit(50);
 

@@ -9,6 +9,7 @@ type Question = {
   id: string;
   text: string;
   options: string[];
+  image_url?: string | null;
 };
 
 type QuizRunnerClientProps = {
@@ -146,6 +147,17 @@ export default function QuizRunnerClient({
             <span>{flagged[currentQuestion.id] ? "Flagged for Review" : "Flag"}</span>
           </button>
         </div>
+
+        {/* Question Diagram / Image Display */}
+        {currentQuestion.image_url && (
+          <div className="overflow-hidden rounded-2xl border border-stone-200 bg-stone-50 p-3 max-w-xl">
+            <img 
+              src={currentQuestion.image_url} 
+              alt="Exam Question Diagram" 
+              className="max-h-80 w-auto mx-auto object-contain rounded-xl shadow-xs"
+            />
+          </div>
+        )}
 
         <p className="text-base font-bold text-slate-900 leading-relaxed">
           {currentQuestion.text}

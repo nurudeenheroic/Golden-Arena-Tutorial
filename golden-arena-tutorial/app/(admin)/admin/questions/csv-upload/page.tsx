@@ -65,11 +65,9 @@ export default function CSVUploadPage() {
       const headers = rows[0];
       const dataRows = rows.slice(1);
 
-      // Fixed: Properly map over dataRows to build record objects
       const records = dataRows.map((row) => {
         const record: Record<string, any> = {};
         headers.forEach((header, idx) => {
-          // Clean BOM, whitespace, and normalize to lowercase for fail-safe matching
           const cleanHeader = header.replace(/^\ufeff/, "").trim().toLowerCase();
           const rawValue = row[idx] ?? "";
           
@@ -111,9 +109,12 @@ export default function CSVUploadPage() {
         const rawCategory = (r.exam_category || "UTME").toUpperCase().trim();
         const exam_category = allowedCategories.includes(rawCategory) ? rawCategory : "UTME";
 
-        // Check various header capitalizations for topic
         const rawTopic = r.topic || r.Topic || r.TOPIC || r["Study Topic"] || r["Subject Topic"] || "";
         const topic = typeof rawTopic === "string" && rawTopic.trim() !== "" ? rawTopic.trim() : null;
+
+        // Extract image url from csv columns (image_url or image)
+        const rawImageUrl = r.image_url || r.imageUrl || r.image || "";
+        const image_url = typeof rawImageUrl === "string" && rawImageUrl.trim() !== "" ? rawImageUrl.trim() : null;
 
         return {
           question_code: r.question_code || null,
@@ -126,6 +127,7 @@ export default function CSVUploadPage() {
           subject_id: validSubjectId,
           year: parseInt(r.year || "2026", 10),
           topic: topic,
+          image_url: image_url, // Added image support
         };
       });
 
@@ -181,7 +183,7 @@ export default function CSVUploadPage() {
             />
           </label>
           <p className="text-[11px] text-slate-400 mt-1">
-            Expected CSV headers: <code>question_code, text, options, correct_answer, explanation, difficulty, exam_category, subject_id, year</code>
+            Expected CSV headers: <code>question_code, text, options, correct_answer, explanation, difficulty, exam_category, subject_id, year, image_url</code>
           </p>
         </div>
         {file && (

@@ -11,6 +11,8 @@ import {
   AlertCircle,
   Plus,
   Trash2,
+  Image as ImageIcon,
+  Upload,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -38,6 +40,10 @@ export default function AdminEditQuestionPage({ params }: PageProps) {
   const [options, setOptions] = useState<string[]>(["", "", "", ""]);
   const [correctOption, setCorrectOption] = useState<number>(0);
   const [explanation, setExplanation] = useState("");
+
+  // Image States
+  const [imageUrl, setImageUrl] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [statusMsg, setStatusMsg] = useState<{
     type: "success" | "error";
@@ -72,10 +78,12 @@ export default function AdminEditQuestionPage({ params }: PageProps) {
         return;
       }
 
-      // Prefill text, subject, topic, options, explanation
+      // Prefill text, subject, topic, options, explanation, image_url
       setText(q.text || "");
       setSubjectId(q.subject_id || "");
       setTopic(q.topic || "");
+      setImageUrl(q.image_url || "");
+      
       const loadedOptions =
         Array.isArray(q.options) && q.options.length > 0
           ? q.options
@@ -98,6 +106,40 @@ export default function AdminEditQuestionPage({ params }: PageProps) {
 
     loadQuestionData();
   }, [questionId]);
+
+  // Handle direct file upload to Supabase Storage
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    setStatusMsg(null);
+
+    try {
+      const supabase = createClient();
+      const fileExt = file.name.split(".").pop();
+      const fileName = `question_${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `questions/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("question-images")
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw new Error(`Storage upload failed: ${uploadError.message}`);
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("question-images")
+        .getPublicUrl(filePath);
+
+      setImageUrl(publicUrl);
+    } catch (err: any) {
+      setStatusMsg({ type: "error", text: err.message || "Failed to upload image file." });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const handleOptionChange = (index: number, val: string) => {
     const updated = [...options];
@@ -155,6 +197,7 @@ export default function AdminEditQuestionPage({ params }: PageProps) {
             options,
             correct_answer: correctAnswerText,
             explanation: explanation.trim() || null,
+            image_url: imageUrl.trim() || null, // Saved to database
           })
           .eq("id", questionId);
 
@@ -207,7 +250,7 @@ export default function AdminEditQuestionPage({ params }: PageProps) {
       <div>
         <h1 className="text-2xl font-black text-slate-900">Edit Question</h1>
         <p className="text-xs text-slate-500 font-medium">
-          Modify question text, multiple choice options, correct answer, and explanation.
+          Modify question text, diagram attachments, options, correct answer, and explanation.
         </p>
       </div>
 
@@ -257,8 +300,61 @@ export default function AdminEditQuestionPage({ params }: PageProps) {
             </div>
           </div>
 
+          {/* Question Diagram / Image Section */}
+          <div className="space-y-2 pt-2 border-t border-stone-100">
+            <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <ImageIcon className="size-4 text-[#833b0c]" />
+              <span>Question Diagram / Image (Optional)</span>
+            </label>
+
+            <div className="flex flex-col sm:flex-row gap-4 items-start">
+              <div className="flex-1 space-y-2 w-full">
+                <input
+                  type="url"
+                  placeholder="Paste direct image URL or upload file..."
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  className="w-full rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs font-medium outline-none focus:border-[#833b0c]"
+                />
+                
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-stone-100 transition">
+                    <Upload className="size-3.5 text-[#833b0c]" />
+                    <span>Upload New Image File</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageFileChange}
+                      className="hidden"
+                    />
+                  </label>
+                  {uploadingImage && (
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-[#833b0c]">
+                      <Loader2 className="size-3.5 animate-spin" /> Uploading...
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Live Image Preview Thumbnail */}
+              {imageUrl && (
+                <div className="relative size-24 rounded-2xl border border-stone-200 bg-stone-50 overflow-hidden shrink-0 flex items-center justify-center p-1 shadow-2xs">
+                  <img src={imageUrl} alt="Question preview" className="h-full w-full object-contain rounded-xl" />
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl("")}
+                    className="absolute top-1 right-1 bg-rose-600 text-white rounded-full size-5 text-[10px] font-bold flex items-center justify-center hover:bg-rose-700 transition cursor-pointer"
+                    title="Remove Image"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Answer Options */}
-          <div className="space-y-3 pt-2">
+          <div className="space-y-3 pt-2 border-t border-stone-100">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-700">
                 Answer Options (Select the radio corresponding to the correct answer)
@@ -342,7 +438,7 @@ export default function AdminEditQuestionPage({ params }: PageProps) {
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || uploadingImage}
           className="w-full rounded-2xl bg-[#833b0c] py-3.5 text-xs font-bold text-white shadow-xs hover:bg-[#6e310a] transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
         >
           {isPending ? (

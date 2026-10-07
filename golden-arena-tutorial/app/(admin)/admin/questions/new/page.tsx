@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, AlertCircle, Loader2, Image as ImageIcon, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type SubjectOption = { id: string; name: string };
@@ -22,6 +22,10 @@ export default function NewQuestionPage() {
   const [explanation, setExplanation] = useState("");
   const [difficulty, setDifficulty] = useState("medium");
   const [year, setYear] = useState(2026);
+  
+  // Image states
+  const [imageUrl, setImageUrl] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -34,6 +38,40 @@ export default function NewQuestionPage() {
     };
     fetchSubjects();
   }, []);
+
+  // Handle direct file upload to Supabase Storage
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    setStatusMsg(null);
+
+    try {
+      const supabase = createClient();
+      const fileExt = file.name.split(".").pop();
+      const fileName = `question_${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `questions/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("question-images")
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw new Error(`Storage upload failed: ${uploadError.message}`);
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("question-images")
+        .getPublicUrl(filePath);
+
+      setImageUrl(publicUrl);
+    } catch (err: any) {
+      setStatusMsg({ type: "error", text: err.message || "Failed to upload image file." });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +96,7 @@ export default function NewQuestionPage() {
         explanation: explanation || null,
         difficulty,
         year: Number(year),
+        image_url: imageUrl || null, // Saved to database
       });
 
       if (error) throw error;
@@ -80,7 +119,7 @@ export default function NewQuestionPage() {
 
       <div>
         <h1 className="text-xl font-black text-slate-900">Create New Question</h1>
-        <p className="text-xs text-slate-500">Add a single question with options and step-by-step explanation.</p>
+        <p className="text-xs text-slate-500">Add a single question with options, step-by-step explanation, and optional diagrams.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="rounded-3xl border border-stone-200 bg-white p-6 shadow-2xs space-y-5">
@@ -124,8 +163,61 @@ export default function NewQuestionPage() {
           />
         </div>
 
+        {/* Question Image / Diagram Section */}
+        <div className="space-y-2 pt-2 border-t border-stone-100">
+          <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+            <ImageIcon className="size-4 text-[#833b0c]" />
+            <span>Question Diagram / Image (Optional)</span>
+          </label>
+
+          <div className="flex flex-col sm:flex-row gap-4 items-start">
+            <div className="flex-1 space-y-2 w-full">
+              <input
+                type="url"
+                placeholder="Paste direct image URL or upload file..."
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                className="w-full rounded-xl border border-stone-200 p-3 text-xs font-medium outline-none focus:border-[#833b0c]"
+              />
+              
+              <div className="flex items-center gap-2">
+                <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-stone-100 transition">
+                  <Upload className="size-3.5 text-[#833b0c]" />
+                  <span>Upload Image File</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageFileChange}
+                    className="hidden"
+                  />
+                </label>
+                {uploadingImage && (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-[#833b0c]">
+                    <Loader2 className="size-3.5 animate-spin" /> Uploading...
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Live Image Preview Thumbnail */}
+            {imageUrl && (
+              <div className="relative size-24 rounded-2xl border border-stone-200 bg-stone-50 overflow-hidden shrink-0 flex items-center justify-center p-1 shadow-2xs">
+                <img src={imageUrl} alt="Question preview" className="h-full w-full object-contain rounded-xl" />
+                <button
+                  type="button"
+                  onClick={() => setImageUrl("")}
+                  className="absolute top-1 right-1 bg-rose-600 text-white rounded-full size-5 text-[10px] font-bold flex items-center justify-center hover:bg-rose-700 transition cursor-pointer"
+                  title="Remove Image"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Options Input Grid */}
-        <div className="space-y-3 pt-2">
+        <div className="space-y-3 pt-2 border-t border-stone-100">
           <span className="text-xs font-bold text-slate-800">Answer Choices</span>
           
           <div className="grid sm:grid-cols-2 gap-3">
@@ -233,7 +325,7 @@ export default function NewQuestionPage() {
 
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || uploadingImage}
           className="w-full rounded-xl bg-[#833b0c] py-3 text-xs font-bold text-white shadow-xs hover:bg-[#6f300a] transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
         >
           {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : "Save Question to Bank"}

@@ -10,6 +10,7 @@ import {
   Pencil,
   Trash2,
   Loader2,
+  Image as ImageIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -27,6 +28,7 @@ interface Question {
   correct_answer?: string;
   topic?: string;
   explanation?: string;
+  image_url?: string | null;
 }
 
 export default function QuizQuestionsManagerClient({
@@ -161,6 +163,22 @@ export default function QuizQuestionsManagerClient({
                     {q.text}
                   </p>
 
+                  {/* Attached Diagram Preview if available */}
+                  {q.image_url && (
+                    <div className="rounded-xl border border-stone-200 bg-stone-50 p-2 overflow-hidden flex items-center gap-2">
+                      <div className="size-12 rounded-lg bg-white border border-stone-200 shrink-0 overflow-hidden flex items-center justify-center">
+                        <img src={q.image_url} alt="Question diagram" className="h-full w-full object-contain" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold text-slate-700 flex items-center gap-1 truncate">
+                          <ImageIcon className="size-3 text-[#833b0c] shrink-0" />
+                          <span>Attached Diagram</span>
+                        </p>
+                        <p className="text-[9px] text-slate-400 truncate">{q.image_url}</p>
+                      </div>
+                    </div>
+                  )}
+
                   {Array.isArray(q.options) && q.options.length > 0 && (
                     <div className="grid grid-cols-1 gap-1.5 pt-1">
                       {q.options.map((opt, oIdx) => (
@@ -241,6 +259,22 @@ export default function QuizQuestionsManagerClient({
                   <p className="text-xs font-bold text-slate-900 leading-relaxed">
                     {q.text}
                   </p>
+
+                  {/* Available Diagram Preview if available */}
+                  {q.image_url && (
+                    <div className="rounded-xl border border-stone-200 bg-white p-2 overflow-hidden flex items-center gap-2">
+                      <div className="size-12 rounded-lg bg-stone-50 border border-stone-200 shrink-0 overflow-hidden flex items-center justify-center">
+                        <img src={q.image_url} alt="Question diagram" className="h-full w-full object-contain" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold text-slate-700 flex items-center gap-1 truncate">
+                          <ImageIcon className="size-3 text-[#833b0c] shrink-0" />
+                          <span>Attached Diagram</span>
+                        </p>
+                        <p className="text-[9px] text-slate-400 truncate">{q.image_url}</p>
+                      </div>
+                    </div>
+                  )}
 
                   {Array.isArray(q.options) && q.options.length > 0 && (
                     <div className="grid grid-cols-1 gap-1.5">
