@@ -6,8 +6,8 @@ export const revalidate = 0;
 export default async function AdminQuestionsPage() {
   const supabase = await createClient();
 
-  // 1. Fetch questions with linked subject details (including image_url)
-  const { data: questions } = await supabase
+  // 1. Fetch questions with .range(0, 4999) to bypass the 1,000 limit
+  const { data: questions, error } = await supabase
     .from("questions")
     .select(`
       id,
@@ -23,13 +23,17 @@ export default async function AdminQuestionsPage() {
       subject_id,
       subjects ( name, track )
     `)
-    .order("id", { ascending: false });
+    .range(0, 4999); // <--- THIS BYPASSES THE 1,000 LIMIT
 
-  // 2. Fetch all subjects for filtering
+  if (error) {
+    console.error("Error fetching questions:", error.message);
+  }
+
+  // 2. Fetch subjects for the filter dropdowns
   const { data: subjects } = await supabase
     .from("subjects")
     .select("id, name, track")
-    .order("name", { ascending: true });
+    .order("name");
 
   return (
     <QuestionsManagerClient

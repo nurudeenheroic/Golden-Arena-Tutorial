@@ -12,12 +12,12 @@ export default async function AdminQuizzesPage({ searchParams }: PageProps) {
   const { subjectId } = await searchParams;
   const supabase = await createClient();
 
-  // Build query and filter by subject_id if parameter is present
   let query = supabase.from("quizzes").select(`
       id,
       title,
       time_limit,
       price,
+      category,
       is_free_tier,
       is_upcoming,
       scheduled_for,
@@ -31,7 +31,6 @@ export default async function AdminQuizzesPage({ searchParams }: PageProps) {
 
   const { data: quizzes } = await query.order("id", { ascending: false });
 
-  // If filtered, fetch subject name for header display
   let filteredSubjectName = "";
   if (subjectId && quizzes && quizzes.length > 0) {
     filteredSubjectName =
@@ -40,7 +39,6 @@ export default async function AdminQuizzesPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           {subjectId && (
@@ -58,7 +56,7 @@ export default async function AdminQuizzesPage({ searchParams }: PageProps) {
               : "Quiz & Exam Management"}
           </h1>
           <p className="text-xs text-slate-500">
-            Configure practice drills, Pro pricing, and live mock exam schedules.
+            Configure UTME/Post-UTME drills, pricing, and live mocks.
           </p>
         </div>
 
@@ -71,13 +69,12 @@ export default async function AdminQuizzesPage({ searchParams }: PageProps) {
         </Link>
       </div>
 
-      {/* Quizzes Responsive Grid */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {quizzes && quizzes.length > 0 ? (
           quizzes.map((quiz) => {
             const subjectName =
-              (quiz.subjects as unknown as { name?: string })?.name ??
-              "General";
+              (quiz.subjects as unknown as { name?: string })?.name ?? "General";
+            const isPostUtme = quiz.category === "post-utme";
 
             return (
               <div
@@ -85,26 +82,28 @@ export default async function AdminQuizzesPage({ searchParams }: PageProps) {
                 className="group rounded-2xl border border-stone-200 bg-white p-5 space-y-4 flex flex-col justify-between hover:border-[#833b0c]/40 transition shadow-2xs"
               >
                 <div className="space-y-2.5">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <span className="rounded-lg bg-stone-100 px-2.5 py-1 text-[10px] font-bold text-slate-700">
                       {subjectName}
                     </span>
 
                     <div className="flex items-center gap-1">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold border ${isPostUtme ? "bg-purple-50 text-purple-700 border-purple-200" : "bg-blue-50 text-blue-700 border-blue-200"}`}>
+                        {isPostUtme ? "Post-UTME" : "UTME"}
+                      </span>
+
                       {quiz.is_free_tier ? (
                         <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
-                          Free Tier
+                          Free
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-900 border border-amber-200">
-                          <Lock className="size-3 text-amber-700" />
-                          Pro Only
+                          <Lock className="size-3 text-amber-700" /> Pro
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Clicking the quiz title navigates directly to /admin/quizzes/[quizId] */}
                   <Link
                     href={`/admin/quizzes/${quiz.id}`}
                     className="block group-hover:text-[#833b0c] transition"
@@ -116,11 +115,6 @@ export default async function AdminQuizzesPage({ searchParams }: PageProps) {
 
                   <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium">
                     <span>Duration: {quiz.time_limit} Mins</span>
-                    {quiz.is_upcoming && (
-                      <span className="inline-flex items-center gap-1 text-amber-800 font-bold">
-                        <Calendar className="size-3" /> Scheduled
-                      </span>
-                    )}
                   </div>
                 </div>
 
@@ -139,12 +133,7 @@ export default async function AdminQuizzesPage({ searchParams }: PageProps) {
         ) : (
           <div className="col-span-full rounded-2xl border border-stone-200 bg-white p-12 text-center space-y-2">
             <BookOpen className="mx-auto size-8 text-slate-300" />
-            <p className="text-xs font-bold text-slate-700">
-              No quizzes created yet.
-            </p>
-            <p className="text-[11px] text-slate-400">
-              Click &quot;Create New Quiz&quot; above to set up your first exam drill.
-            </p>
+            <p className="text-xs font-bold text-slate-700">No quizzes created yet.</p>
           </div>
         )}
       </div>

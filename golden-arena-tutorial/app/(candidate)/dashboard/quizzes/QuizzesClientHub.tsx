@@ -20,6 +20,7 @@ export type FormattedQuiz = {
   id: string;
   title: string;
   subject: string;
+  category?: string; // 'utme' or 'post-utme'
   durationMinutes: number;
   isFreeTier: boolean;
   isUpcoming: boolean;
@@ -39,29 +40,31 @@ export default function QuizzesClientHub({
 }: QuizzesClientHubProps) {
   const router = useRouter();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<"utme" | "post-utme">("utme"); // 👈 Category separator tab state
   const [selectedSubject, setSelectedSubject] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleQuizClick = (quiz: FormattedQuiz) => {
     if (quiz.isUpcoming) return;
-
-    // Gate paid quizzes for non-subscribed candidates
     if (!quiz.isFreeTier && !isPaid) {
       setShowUpgradeModal(true);
       return;
     }
-
-    // Navigate to CBT test runner
     router.push(`/dashboard/quizzes/${quiz.id}`);
   };
 
-  // Extract unique subjects for dynamic filter buttons
+  // Filter quizzes by active category tab first
+  const tabQuizzes = quizzes.filter((q) => {
+    const cat = q.category ?? "utme";
+    return activeTab === "post-utme" ? cat === "post-utme" : cat !== "post-utme";
+  });
+
   const availableSubjects = [
     "All",
-    ...Array.from(new Set(quizzes.map((q) => q.subject))).filter(Boolean),
+    ...Array.from(new Set(tabQuizzes.map((q) => q.subject))).filter(Boolean),
   ];
 
-  const filteredQuizzes = quizzes.filter((q) => {
+  const filteredQuizzes = tabQuizzes.filter((q) => {
     const matchesSubject =
       selectedSubject === "All" || q.subject === selectedSubject;
     const matchesSearch = q.title
@@ -74,7 +77,7 @@ export default function QuizzesClientHub({
   const upcomingQuizzes = filteredQuizzes.filter((q) => q.isUpcoming);
 
   return (
-    <div className="mx-auto max-w-[1280px] px-5 py-8 space-y-10">
+    <div className="mx-auto max-w-[1280px] px-5 py-8 space-y-8">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-2xs">
         <div>
@@ -82,11 +85,11 @@ export default function QuizzesClientHub({
             CBT Quiz & Practice Center
           </h1>
           <p className="text-xs text-slate-500">
-            Access official UTME past questions, timed drills, and national mock exams.
+            Select between UTME Practice Drills and Post-UTME Screening Tests.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div>
           {!isPaid ? (
             <button
               type="button"
@@ -98,11 +101,36 @@ export default function QuizzesClientHub({
             </button>
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 border border-emerald-200">
-              <Sparkles className="size-3.5 fill-emerald-600" />
-              Pro Candidate Active
+              <Sparkles className="size-3.5 fill-emerald-600" /> Pro Candidate Active
             </span>
           )}
         </div>
+      </div>
+
+      {/* Category Tabs Switcher (UTME vs Post-UTME) */}
+      <div className="flex border-b border-stone-200 gap-8">
+        <button
+          type="button"
+          onClick={() => { setActiveTab("utme"); setSelectedSubject("All"); }}
+          className={`pb-3 text-xs font-black tracking-wide transition border-b-2 cursor-pointer ${
+            activeTab === "utme"
+              ? "border-[#833b0c] text-[#833b0c]"
+              : "border-transparent text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          UTME Practice Tests
+        </button>
+        <button
+          type="button"
+          onClick={() => { setActiveTab("post-utme"); setSelectedSubject("All"); }}
+          className={`pb-3 text-xs font-black tracking-wide transition border-b-2 cursor-pointer ${
+            activeTab === "post-utme"
+              ? "border-[#833b0c] text-[#833b0c]"
+              : "border-transparent text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          Post-UTME Screen Tests
+        </button>
       </div>
 
       {/* Filter & Search Bar */}
@@ -136,80 +164,8 @@ export default function QuizzesClientHub({
         </div>
       </div>
 
-      {/* SECTION 1: UPCOMING MOCK EXAMS */}
-      {upcomingQuizzes.length > 0 && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Calendar className="size-4 text-[#833b0c]" />
-            <h2 className="text-base font-bold text-slate-900">
-              Upcoming Live Mock Exams
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            {upcomingQuizzes.map((quiz) => (
-              <div
-                key={quiz.id}
-                className="relative rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50/50 to-orange-50/30 p-5 space-y-4"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-extrabold text-amber-900 border border-amber-300">
-                    <Clock className="size-3" />
-                    Scheduled Live Exam
-                  </span>
-
-                  {!quiz.isFreeTier && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800">
-                      <Lock className="size-3" />
-                      Pro Ticket
-                    </span>
-                  )}
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">
-                    {quiz.title}
-                  </h3>
-                  <p className="text-xs text-slate-600 mt-1 flex items-center gap-3">
-                    <span>{quiz.subject}</span>
-                    <span>•</span>
-                    <span>{quiz.durationMinutes} Mins</span>
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-amber-200/60">
-                  <span className="text-[11px] font-bold text-slate-700">
-                    {quiz.scheduledFor
-                      ? `Starts: ${new Date(quiz.scheduledFor).toLocaleString()}`
-                      : "Schedule Pending"}
-                  </span>
-                  <button
-                    disabled
-                    className="rounded-xl bg-stone-200 px-3 py-1.5 text-xs font-bold text-slate-500 cursor-not-allowed"
-                  >
-                    Opens Soon
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* SECTION 2: AVAILABLE QUIZZES */}
+      {/* Available Quizzes Grid */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BookOpen className="size-4 text-[#833b0c]" />
-            <h2 className="text-base font-bold text-slate-900">
-              Practice Drills & Past Questions
-            </h2>
-          </div>
-          <span className="text-xs text-slate-500 font-medium">
-            {availableQuizzes.length} Quizzes Available
-          </span>
-        </div>
-
         {availableQuizzes.length > 0 ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {availableQuizzes.map((quiz) => (
@@ -225,7 +181,6 @@ export default function QuizzesClientHub({
                     </span>
 
                     <div className="flex items-center gap-1.5">
-                      {/* Attempt Status Badge */}
                       {quiz.attempted ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
                           <CheckCircle2 className="size-3 text-emerald-600" />
@@ -237,11 +192,9 @@ export default function QuizzesClientHub({
                         </span>
                       )}
 
-                      {/* Tier Tag */}
                       {!quiz.isFreeTier && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold text-amber-900 border border-amber-200">
-                          <Lock className="size-3 text-amber-700" />
-                          Paid
+                          <Lock className="size-3 text-amber-700" /> Paid
                         </span>
                       )}
                     </div>
@@ -257,7 +210,6 @@ export default function QuizzesClientHub({
                     <Clock className="size-3.5 text-slate-400" />
                     {quiz.durationMinutes} mins
                   </span>
-
                   <div className="flex items-center gap-1 font-bold text-[#833b0c] group-hover:translate-x-1 transition">
                     <span>Start</span>
                     <Play className="size-3 fill-[#833b0c]" />
@@ -269,17 +221,14 @@ export default function QuizzesClientHub({
         ) : (
           <div className="rounded-2xl border border-stone-200 bg-white p-12 text-center space-y-2">
             <HelpCircle className="mx-auto size-8 text-slate-300" />
-            <p className="text-sm font-bold text-slate-800">No quizzes found</p>
-            <p className="text-xs text-slate-500">
-              Try adjusting your search terms or subject selection.
-            </p>
+            <p className="text-sm font-bold text-slate-800">No quizzes found for this category</p>
           </div>
         )}
       </section>
 
-      {/* UPGRADE PRO MODAL */}
+      {/* UPGRADE MODAL */}
       {showUpgradeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl space-y-5">
             <button
               type="button"
@@ -288,50 +237,17 @@ export default function QuizzesClientHub({
             >
               <X className="size-4" />
             </button>
-
             <div className="space-y-2">
-              <div className="grid size-12 place-items-center rounded-2xl bg-amber-100 text-amber-800">
-                <Sparkles className="size-6 fill-amber-600" />
-              </div>
-              <h3 className="text-lg font-black text-slate-900">
-                Unlock Full Access
-              </h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                This drill contains premium UTME questions and explanations reserved for Pro Candidates.
-              </p>
+              <h3 className="text-lg font-black text-slate-900">Unlock Full Access</h3>
+              <p className="text-xs text-slate-600">This drill contains premium questions reserved for Pro Candidates.</p>
             </div>
-
-            <div className="space-y-2 rounded-2xl bg-stone-50 p-4 text-xs font-semibold text-slate-700">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
-                <span>Unlimited UTME Past Questions & Drills</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
-                <span>Step-by-step answer key explanations</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
-                <span>Live national mock exam tickets</span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Link
-                href="/dashboard#pricing"
-                onClick={() => setShowUpgradeModal(false)}
-                className="block w-full rounded-xl bg-[#833b0c] py-3 text-center text-xs font-bold text-white shadow-md hover:bg-[#6f300a] transition"
-              >
-                Upgrade Plan Now
-              </Link>
-              <button
-                type="button"
-                onClick={() => setShowUpgradeModal(false)}
-                className="block w-full py-2 text-center text-xs font-bold text-slate-500 hover:underline cursor-pointer"
-              >
-                Continue with Free Quizzes
-              </button>
-            </div>
+            <Link
+              href="/dashboard#pricing"
+              onClick={() => setShowUpgradeModal(false)}
+              className="block w-full rounded-xl bg-[#833b0c] py-3 text-center text-xs font-bold text-white shadow-md hover:bg-[#6f300a] transition"
+            >
+              Upgrade Plan Now
+            </Link>
           </div>
         </div>
       )}
