@@ -1,20 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { Flame, PlayCircle, Trophy, ArrowRight, Lock, Award, Users, Calendar, CheckCircle2, Sparkles } from "lucide-react";
+import { Flame, PlayCircle, Trophy, ArrowRight, Lock, Award, Users, Calendar, CheckCircle2, Sparkles, User as UserIcon } from "lucide-react";
 import ProtectedLink from "./ProtectedLink";
+
+export type LeaderboardUser = {
+  rank: number;
+  name: string;
+  score: string;
+  isCurrentUser?: boolean;
+};
 
 export type SideRailUser = {
   name: string;
   email?: string;
+  role?: string;
+  plan?: string;
   isPaid?: boolean;
   streak?: number;
   bestStreak?: number;
   recentQuizzes?: {
     name: string;
     progress: number;
+    attemptId?: string; // Added to route directly to the result page
   }[];
-  leaderboardRank?: number;
+  leaderboardRank?: number | string;
   activeStudyGroups?: {
     name: string;
     membersCount: number;
@@ -23,67 +33,70 @@ export type SideRailUser = {
 
 type SideRailProps = {
   user?: SideRailUser;
+  leaderboard?: LeaderboardUser[];
   isLoading?: boolean;
 };
 
-// Fallback data for anonymous marketing visitors
-const staticPopularPostUtme = [
-  { name: "UNILAG Post-UTME", questions: "1,200+ Practice Questions" },
-  { name: "OAU Post-UTME", questions: "950+ Practice Questions" },
-  { name: "UI Post-UTME", questions: "1,100+ Practice Questions" },
-  { name: "UNILORIN Post-UTME", questions: "800+ Practice Questions" },
-];
-
-const staticLeaderboard = [
-  { rank: 1, name: "Chinedu O.", score: "2,840 pts" },
-  { rank: 2, name: "Amina Y.", score: "2,710 pts" },
-  { rank: 3, name: "Tunde B.", score: "2,650 pts" },
-];
-
-// Calculate days remaining until UTME (typically around late April / May)
+// Target 2027 UTME commencement date: March 25, 2027
 function getUtmeCountdown() {
   const now = new Date();
-  let targetYear = now.getFullYear();
-  let targetDate = new Date(targetYear, 3, 25); // Month 3 is April
-  if (now > targetDate) {
-    targetDate = new Date(targetYear + 1, 3, 25);
-  }
+  const targetDate = new Date("2027-03-25T00:00:00");
   const diffTime = targetDate.getTime() - now.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays > 0 ? diffDays : 0;
 }
 
-export function SideRail({ user = null, isLoading = false }: SideRailProps) {
-  // Skeleton Loader for Async DB Fetching
+const staticPopularPostUtme = [
+  { name: "UNILORIN Post-UTME", questions: "800+ Practice Questions", path: "/dashboard/post-utme/unilorin" },
+  { name: "UNILAG Post-UTME", questions: "1,200+ Practice Questions", path: "/dashboard/post-utme" },
+  { name: "OAU Post-UTME", questions: "950+ Practice Questions", path: "/dashboard/post-utme" },
+  { name: "UI Post-UTME", questions: "1,100+ Practice Questions", path: "/dashboard/post-utme" },
+];
+
+const staticLeaderboardFallback = [
+  { rank: 1, name: "Chinedu O.", score: "2,840 pts" },
+  { rank: 2, name: "Amina Y.", score: "2,710 pts" },
+  { rank: 3, name: "Tunde B.", score: "2,650 pts" },
+];
+
+export function SideRail({ user = null, leaderboard = [], isLoading = false }: SideRailProps) {
   if (isLoading) {
     return <SideRailSkeleton />;
   }
 
   const utmeDaysLeft = getUtmeCountdown();
   const displayName = user ? user.name : "Guest Candidate";
-  const initials = user ? user.name.charAt(0).toUpperCase() : "G";
+  const userRole = user?.role ? user.role.toUpperCase() : "CANDIDATE";
+  
+  // Strictly reflect whatever plan value is stored in the database (e.g. "ANNUAL"), falling back to "FREE" if missing
+  const userPlan = user?.plan ? user.plan.toUpperCase() : "FREE";
+  const hasActivePlan = user?.isPaid || (user?.plan && user.plan.toLowerCase() !== "free");
+
+  const activeLeaderboard = leaderboard.length > 0 ? leaderboard : staticLeaderboardFallback;
+  const whatsappStudyGroupLink = "https://chat.whatsapp.com/your-general-study-group-invite";
 
   return (
     <aside className="space-y-4">
-      {/* 1. Student Profile Card (Placed at the very top) */}
+      {/* 1. Dynamic Student Profile Card */}
       <section className="rounded-2xl border border-[#833b0c]/20 bg-gradient-to-br from-[#f9eee7] to-white p-4 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#833b0c] text-white font-black text-base shadow-xs">
-            {initials}
+          <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-[#833b0c] text-white shadow-xs">
+            <UserIcon className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="truncate text-xs font-black text-slate-900 tracking-tight">
                 {displayName}
               </span>
-              {user && (
-                <span className={`rounded-full px-1.5 py-0.2 text-[8px] font-extrabold ${user.isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-stone-700'}`}>
-                  {user.isPaid ? 'PRO' : 'FREE'}
-                </span>
-              )}
+              <span className="rounded-full bg-[#833b0c]/10 px-1.5 py-0.2 text-[8px] font-extrabold text-[#833b0c]">
+                {userRole}
+              </span>
+              <span className={`rounded-full px-1.5 py-0.2 text-[8px] font-extrabold ${hasActivePlan ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-200 text-stone-700'}`}>
+                {userPlan}
+              </span>
             </div>
-            <p className="truncate text-[10px] text-slate-500">
-              {user ? user.email || "GAT Candidate Portal" : "Explore GAT Practice Tools"}
+            <p className="truncate text-[10px] text-slate-500 mt-0.5">
+              {user ? user.email || "Golden Arena Candidate Portal" : "Explore GAT Practice Tools"}
             </p>
           </div>
         </div>
@@ -114,7 +127,7 @@ export function SideRail({ user = null, isLoading = false }: SideRailProps) {
         )}
       </section>
 
-      {/* 2. Weekly Leaderboard (Promoted near the top for engagement) */}
+      {/* 2. Dynamically Fetched Weekly Leaderboard */}
       <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -131,34 +144,42 @@ export function SideRail({ user = null, isLoading = false }: SideRailProps) {
         </div>
 
         <div className="mt-3 space-y-2">
-          {staticLeaderboard.map((student) => (
+          {activeLeaderboard.slice(0, 3).map((student) => (
             <div
               key={student.rank}
-              className="flex items-center justify-between rounded-xl bg-stone-50 px-3 py-2 text-xs"
+              className={`flex items-center justify-between rounded-xl px-3 py-2 text-xs transition ${
+                student.isCurrentUser ? 'bg-[#f9eee7] border border-[#833b0c]/30 font-bold' : 'bg-stone-50'
+              }`}
             >
-              <div className="flex items-center gap-2">
-                <span className="grid size-5 place-items-center rounded-full bg-[#f9eee7] text-[10px] font-black text-[#833b0c]">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[#f9eee7] text-[10px] font-black text-[#833b0c]">
                   #{student.rank}
                 </span>
-                <span className="text-[10px] font-semibold text-slate-800">{student.name}</span>
+                <span className="truncate text-[10px] font-semibold text-slate-800 flex items-center gap-1.5">
+                  {student.name}
+                  {student.isCurrentUser && (
+                    <span className="rounded bg-[#833b0c] px-1 py-0.2 text-[8px] font-extrabold text-white">
+                      You
+                    </span>
+                  )}
+                </span>
               </div>
-              <span className="text-[9px] font-bold text-[#833b0c]">{student.score}</span>
+              <span className="text-[9px] font-bold text-[#833b0c] shrink-0">{student.score}</span>
             </div>
           ))}
 
-          {/* Current Candidate's Rank Badge */}
           {user && (
             <div className="mt-2.5 rounded-xl border border-[#833b0c]/20 bg-[#f9eee7] px-3 py-2 flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-800">Your Rank</span>
+              <span className="text-[10px] font-bold text-slate-800">Your Standing</span>
               <span className="text-[10px] font-black text-[#833b0c]">
-                #{user.leaderboardRank ?? "Unranked"}
+                {user.leaderboardRank ? `#${user.leaderboardRank}` : "Unranked"}
               </span>
             </div>
           )}
         </div>
       </section>
 
-      {/* 3. Streak Banner & Interactive Check-In Trigger */}
+      {/* 3. Streak Banner & Interactive Check-In */}
       <section className="rounded-2xl border border-stone-200 bg-[#fff6ef] p-4">
         <div className="flex items-center gap-2">
           <Flame className="size-5 text-[#833b0c]" />
@@ -167,7 +188,7 @@ export function SideRail({ user = null, isLoading = false }: SideRailProps) {
               {user ? `Keep It Up, ${user.name.split(" ")[0]}! 🔥` : "Keep Your Streak! 🔥"}
             </p>
             <p className="text-[9px] text-slate-500">
-              {user ? "Daily study streak active." : "Sign in to earn daily streaks!"}
+              {user ? "Practice daily to grow your streak." : "Sign in to earn daily streaks!"}
             </p>
           </div>
         </div>
@@ -184,24 +205,24 @@ export function SideRail({ user = null, isLoading = false }: SideRailProps) {
         </div>
 
         <ProtectedLink
-          href="/dashboard"
+          href="/dashboard/quizzes"
           user={user}
           className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#833b0c] py-2 text-[10px] font-bold text-white shadow-xs transition hover:bg-[#6f300a]"
         >
           <CheckCircle2 className="size-3.5" />
-          <span>Complete Daily Check-In</span>
+          <span>Take Quiz to Maintain Streak</span>
         </ProtectedLink>
       </section>
 
-      {/* 4. UTME Countdown Widget */}
+      {/* 4. UTME 2027 Countdown Widget */}
       <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f9eee7] text-[#833b0c]">
             <Calendar className="size-4" />
           </div>
           <div>
-            <p className="text-[10px] font-bold text-slate-900">UTME Countdown</p>
-            <p className="text-[9px] text-slate-500">Target Exam Window</p>
+            <p className="text-[10px] font-bold text-slate-900">2027 UTME Countdown</p>
+            <p className="text-[9px] text-slate-500">March 25, 2027 Window</p>
           </div>
         </div>
         <div className="text-right">
@@ -210,12 +231,12 @@ export function SideRail({ user = null, isLoading = false }: SideRailProps) {
         </div>
       </section>
 
-      {/* 5. Recent Quizzes (Dynamic DB vs Logged-Out Teaser) */}
+      {/* 5. Recent Quizzes History Card */}
       <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold text-slate-900">Recent Quizzes</h3>
           <ProtectedLink
-            href="/quizzes"
+            href="/dashboard/quizzes/history" // Updated to point to full history page
             user={user}
             className="text-[9px] font-semibold text-[#833b0c] hover:underline"
           >
@@ -227,7 +248,12 @@ export function SideRail({ user = null, isLoading = false }: SideRailProps) {
           <div className="mt-3 space-y-3">
             {user.recentQuizzes && user.recentQuizzes.length > 0 ? (
               user.recentQuizzes.map((quiz) => (
-                <ProtectedLink key={quiz.name} href="/quizzes" user={user} className="block group">
+                <ProtectedLink 
+                  key={quiz.name} 
+                  href={quiz.attemptId ? `/dashboard/quizzes/results/${quiz.attemptId}` : "/dashboard/quizzes"} 
+                  user={user} 
+                  className="block group"
+                >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-2">
                       <PlayCircle className="size-4 shrink-0 text-[#833b0c]" />
@@ -246,14 +272,14 @@ export function SideRail({ user = null, isLoading = false }: SideRailProps) {
                 </ProtectedLink>
               ))
             ) : (
-              <p className="text-[10px] text-slate-500 py-2 text-center">No quizzes attempted yet.</p>
+              <p className="text-[10px] text-slate-500 py-2 text-center">No recent quiz attempts found.</p>
             )}
           </div>
         ) : (
           <div className="mt-3 rounded-xl bg-stone-50 p-3 text-center border border-dashed border-stone-200">
             <Lock className="mx-auto size-4 text-slate-400" />
             <p className="mt-1.5 text-[10px] font-semibold text-slate-700">Practice History Locked</p>
-            <p className="mt-0.5 text-[9px] text-slate-500">Sign in to track real-time progress</p>
+            <p className="mt-0.5 text-[9px] text-slate-500">Sign in to track real-time quiz results</p>
             <Link
               href="/login"
               className="mt-2.5 inline-flex items-center gap-1 text-[9px] font-bold text-[#833b0c] hover:underline"
@@ -269,7 +295,7 @@ export function SideRail({ user = null, isLoading = false }: SideRailProps) {
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold text-slate-900">Popular Post-UTME</h3>
           <ProtectedLink
-            href="/post-utme"
+            href="/dashboard/post-utme"
             user={user}
             className="text-[9px] font-semibold text-[#833b0c] hover:underline"
           >
@@ -281,7 +307,7 @@ export function SideRail({ user = null, isLoading = false }: SideRailProps) {
           {staticPopularPostUtme.map((school) => (
             <ProtectedLink
               key={school.name}
-              href="/post-utme"
+              href={school.path}
               user={user}
               className="block py-2.5 first:pt-0 last:pb-0 group"
             >
@@ -294,45 +320,48 @@ export function SideRail({ user = null, isLoading = false }: SideRailProps) {
         </div>
       </section>
 
-      {/* 7. Study Groups Preview Widget */}
+      {/* 7. Active Study Groups (Linked directly to WhatsApp) */}
       <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Users className="size-4 text-[#833b0c]" />
             <h3 className="text-xs font-bold text-slate-900">Active Study Groups</h3>
           </div>
-          <ProtectedLink
-            href="/dashboard/study-groups"
-            user={user}
+          <a
+            href={whatsappStudyGroupLink}
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-[9px] font-semibold text-[#833b0c] hover:underline"
           >
             Explore →
-          </ProtectedLink>
+          </a>
         </div>
 
         <div className="mt-3 space-y-2">
-          {user && user.activeStudyGroups && user.activeStudyGroups.length > 0 ? (
-            user.activeStudyGroups.map((group) => (
-              <ProtectedLink
-                key={group.name}
-                href="/dashboard/study-groups"
-                user={user}
-                className="flex items-center justify-between rounded-xl bg-stone-50 px-3 py-2 text-xs transition hover:bg-[#f9eee7]/50"
+          {hasActivePlan ? (
+            <div className="rounded-xl bg-stone-50 p-3 text-center border border-stone-200">
+              <p className="text-[10px] font-semibold text-slate-800">The GAT Whatsapp Study Lounge</p>
+              <p className="text-[9px] text-slate-500 mt-0.5">Join our community of learners!</p>
+              <a
+                href={whatsappStudyGroupLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2.5 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 hover:underline"
               >
-                <span className="text-[10px] font-semibold text-slate-800">{group.name}</span>
-                <span className="text-[9px] font-bold text-[#833b0c]">{group.membersCount} members</span>
-              </ProtectedLink>
-            ))
+                Join WhatsApp Group <ArrowRight className="size-2.5" />
+              </a>
+            </div>
           ) : (
-            <div className="rounded-xl bg-stone-50 p-2.5 text-center">
-              <p className="text-[10px] font-semibold text-slate-700">Join a peer study circle</p>
-              <p className="text-[9px] text-slate-400 mt-0.5">Collaborate on difficult UTME subjects.</p>
+            <div className="rounded-xl bg-stone-50 p-3 text-center border border-dashed border-stone-200">
+              <Lock className="mx-auto size-4 text-amber-600" />
+              <p className="mt-1.5 text-[10px] font-semibold text-slate-800">PRO Plan Required</p>
+              <p className="mt-0.5 text-[9px] text-slate-500">Study groups are exclusively unlocked for paid candidates.</p>
               <ProtectedLink
-                href="/dashboard/study-groups"
+                href="/pricing"
                 user={user}
-                className="mt-2 inline-flex items-center gap-1 text-[9px] font-bold text-[#833b0c] hover:underline"
+                className="mt-2.5 inline-flex items-center gap-1 text-[9px] font-bold text-[#833b0c] hover:underline"
               >
-                Browse groups <ArrowRight className="size-2.5" />
+                Upgrade Plan <ArrowRight className="size-2.5" />
               </ProtectedLink>
             </div>
           )}
@@ -351,7 +380,6 @@ export function SideRail({ user = null, isLoading = false }: SideRailProps) {
   );
 }
 
-{/* Skeleton Loader Component */}
 function SideRailSkeleton() {
   return (
     <aside className="space-y-4 animate-pulse">
@@ -359,7 +387,6 @@ function SideRailSkeleton() {
       <div className="h-40 rounded-2xl bg-stone-200" />
       <div className="h-40 rounded-2xl bg-stone-200" />
       <div className="h-20 rounded-2xl bg-stone-200" />
-      <div className="h-36 rounded-2xl bg-stone-200" />
     </aside>
   );
 }
