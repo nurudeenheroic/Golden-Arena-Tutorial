@@ -175,22 +175,51 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
     }
   };
 
-  // Re-map navLinks: Remove FAQ, add Study Groups into Resources, and ensure Leaderboard is included
+  // Re-map navLinks with precise routing logic
   const processedNavLinks = navLinks.map((item) => {
-    if (item.label.toLowerCase().includes("resource") && Array.isArray(item.dropdown)) {
-      const filtered = item.dropdown.filter(
-        (sub) => !sub.label.toLowerCase().includes("faq") && !sub.label.toLowerCase().includes("support")
-      );
-      const hasStudyGroups = filtered.some((sub) => sub.label.toLowerCase().includes("study group"));
-      const updatedDropdown = hasStudyGroups
-        ? filtered
-        : [...filtered, { label: "Study Groups", href: "/dashboard/study-groups", requiresPaid: false }];
+    const labelLower = item.label.toLowerCase().trim();
 
+    // 1. POST-UTME Dropdown mapping
+    if (labelLower.includes("post-utme")) {
       return {
         ...item,
-        dropdown: updatedDropdown,
+        dropdown: [
+          { label: "Select University", href: "/dashboard/post-utme", requiresPaid: false },
+          { label: "Past CBT Screen Test", href: "/dashboard/quizzes", requiresPaid: false },
+        ],
       };
     }
+
+    // 2. UTME Dropdown mapping
+    if (labelLower.includes("utme")) {
+      return {
+        ...item,
+        dropdown: [
+          { label: "UTME Practice Tests", href: "/dashboard/quizzes", requiresPaid: false },
+          { label: "JAMB Syllabus & Subject Combination Guide", href: "/dashboard/AllAboutUTME", requiresPaid: false },
+        ],
+      };
+    }
+
+    // 3. Resources Dropdown mapping (Including Study Notes & Study Groups)
+    if (labelLower.includes("resource")) {
+      return {
+        ...item,
+        dropdown: [
+          { label: "Study Notes", href: "/dashboard/notes", requiresPaid: false },
+          { label: "Study Groups", href: "https://chat.whatsapp.com/K817Augm4Ug0SB0PAwfnkS", requiresPaid: false },
+        ],
+      };
+    }
+
+    // 4. Standalone top-level links mapping (Practice Questions & Quizzes)
+    if (labelLower.includes("practice question") || labelLower.includes("past question")) {
+      return { ...item, href: "/dashboard/past-questions" };
+    }
+    if (labelLower === "quizzes") {
+      return { ...item, href: "/dashboard/quizzes" };
+    }
+
     return item;
   });
 
@@ -312,6 +341,23 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
                       <div className="flex flex-col space-y-1">
                         {item.dropdown.map((subItem) => {
                           const subActive = pathname === subItem.href;
+                          const isExternal = subItem.href.startsWith("http");
+
+                          if (isExternal) {
+                            return (
+                              <a
+                                key={subItem.label}
+                                href={subItem.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => setActiveDropdown(null)}
+                                className="block rounded-lg px-3 py-2 text-xs font-medium text-slate-700 hover:bg-[#f9eee7] hover:text-[#833b0c] transition"
+                              >
+                                {subItem.label}
+                              </a>
+                            );
+                          }
+
                           return (
                             <ProtectedLink
                               key={subItem.label}
@@ -332,6 +378,21 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
                       </div>
                     </div>
                   </div>
+                );
+              }
+
+              const isExternal = item.href.startsWith("http");
+              if (isExternal) {
+                return (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center px-2.5 py-2 rounded-lg text-xs font-medium text-slate-700 hover:text-[#833b0c] hover:bg-stone-50 whitespace-nowrap transition-all"
+                  >
+                    <span>{item.label}</span>
+                  </a>
                 );
               }
 
@@ -593,6 +654,23 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
                             <div className="ml-3 space-y-1 border-l-2 border-[#f9eee7] pl-2">
                               {item.dropdown.map((subItem) => {
                                 const subActive = pathname === subItem.href;
+                                const isExternal = subItem.href.startsWith("http");
+
+                                if (isExternal) {
+                                  return (
+                                    <a
+                                      key={subItem.label}
+                                      href={subItem.href}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={() => setMobileMenuOpen(false)}
+                                      className="block rounded-lg py-2 px-2 text-xs font-medium text-slate-600 hover:text-[#833b0c] transition"
+                                    >
+                                      {subItem.label}
+                                    </a>
+                                  );
+                                }
+
                                 return (
                                   <ProtectedLink
                                     key={subItem.label}
@@ -614,22 +692,37 @@ export function SiteNavbar({ user = null }: SiteNavbarProps) {
                           </div>
                         </>
                       ) : (
-                        <ProtectedLink
-                          href={item.href}
-                          user={user}
-                          requiresPaid={item.requiresPaid}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-semibold transition ${
-                            isActive
-                              ? "bg-[#f9eee7] text-[#833b0c]"
-                              : "text-slate-800 hover:bg-[#f9eee7] hover:text-[#833b0c]"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            {getNavLinkIcon(item.label)}
-                            <span>{item.label}</span>
-                          </div>
-                        </ProtectedLink>
+                        item.href && item.href.startsWith("http") ? (
+                          <a
+                            href={item.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 transition hover:bg-[#f9eee7] hover:text-[#833b0c]"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              {getNavLinkIcon(item.label)}
+                              <span>{item.label}</span>
+                            </div>
+                          </a>
+                        ) : (
+                          <ProtectedLink
+                            href={item.href}
+                            user={user}
+                            requiresPaid={item.requiresPaid}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-semibold transition ${
+                              isActive
+                                ? "bg-[#f9eee7] text-[#833b0c]"
+                                : "text-slate-800 hover:bg-[#f9eee7] hover:text-[#833b0c]"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              {getNavLinkIcon(item.label)}
+                              <span>{item.label}</span>
+                            </div>
+                          </ProtectedLink>
+                        )
                       )}
                     </div>
                   );
