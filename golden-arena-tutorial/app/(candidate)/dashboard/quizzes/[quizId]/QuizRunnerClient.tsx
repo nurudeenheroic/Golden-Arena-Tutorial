@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { submitQuizAction } from "@/submit-quiz";
+import { submitQuizAttempt } from "./actions"; // Updated to import from local actions file
 import { useRouter } from "next/navigation";
 import { Clock, Flag, CheckCircle2, ChevronLeft, ChevronRight, Loader2, AlertCircle } from "lucide-react";
 
@@ -60,21 +60,22 @@ export default function QuizRunnerClient({
     setShowConfirmModal(true);
   };
 
-  // Perform actual API submission
+  // Perform actual server action submission
   const executeSubmission = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
 
     const timeSpentSec = Math.max(timeLimitMinutes * 60 - timeLeft, 1);
 
-    const formattedResponses = Object.entries(answers).map(([questionId, selectedOption]) => ({
-      questionId,
-      selectedOption,
-    }));
+    // Convert answers format from { questionId: selectedOption } to your server action expectation
+    const answersGiven: Record<string, string> = {};
+    Object.entries(answers).forEach(([questionId, selectedOption]) => {
+      answersGiven[questionId] = selectedOption;
+    });
 
     try {
-      const result = await submitQuizAction(quizId, formattedResponses, timeSpentSec);
-      router.push(`/dashboard/quizzes/results/${result.attemptId}`);
+      // This calls your server action, calculates score, updates the streak, and handles redirection automatically
+      await submitQuizAttempt(quizId, answersGiven, timeSpentSec);
     } catch (error: any) {
       console.error("Quiz submission error:", error);
       alert(error?.message || "There was an error submitting your quiz. Please try again.");

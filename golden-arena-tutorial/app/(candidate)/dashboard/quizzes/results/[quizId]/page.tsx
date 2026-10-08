@@ -97,13 +97,17 @@ export default async function QuizResultsPage({ params }: PageProps) {
 
   // Score & Metrics Calculations
   const score = attempt.score ?? 0; // Correct Count (e.g. 5)
-  const totalQuestions = attempt.total_questions ?? 1; // True Total (e.g. 40)
+  const totalQuestions = attempt.total_questions ?? 1; // True Total (e.g. 5)
   const percentage = Math.round((score / totalQuestions) * 100);
   const timeTakenSec = attempt.time_taken_sec ?? 0;
 
-  const attemptedCount = userAnswers?.length ?? 0; // Total answered (e.g. 6)
-  const incorrectCount = attemptedCount - score; // Incorrect answered (e.g. 1)
-  const unattemptedCount = Math.max(totalQuestions - attemptedCount, 0); // Unattempted (e.g. 34)
+  // Since userAnswers is a record/object, use Object.keys() to count how many were answered
+  const answersObj = attempt.answers_given ?? {};
+  const attemptedCount = Object.keys(answersObj).length; // Total answered (e.g. 5)
+
+  // Use Math.max to prevent any negative numbers just in case
+  const incorrectCount = Math.max(0, attemptedCount - score); // Incorrect answered
+  const unattemptedCount = Math.max(0, totalQuestions - attemptedCount); // Unattempted
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
